@@ -1,0 +1,110 @@
+const handleDisplayDailyReport = (database) => async (req, res) => {
+    const { date } = req.body;
+
+    try {
+        // Convert date to 'YYYY-MM-DD' format
+        const formattedDate = new Date(date).toISOString().split('T')[0];
+
+        // Fetch attendance data for the given date
+        const attended = await database('attendances')
+            .select(
+                'attendances.*',
+                'student_subjects.subject_section as section_number',
+                'subjects.id as subject_id'
+            )
+            .leftJoin('student_subjects', function() {
+                this.on('student_subjects.student_id', '=', 'attendances.student_id')
+                    .andOn('student_subjects.subject_id', '=', 'attendances.subject_id');
+            })
+            .leftJoin('subjects', 'subjects.id', 'attendances.subject_id')
+            .where('attendances.status', 'Present')
+            .whereRaw('DATE(attendances.date) = ?', [formattedDate]);
+
+        // Create a map of attendance counts by subject_id and section_number (composite key)
+        const attendanceCountMap = attended.reduce((acc, record) => {
+            const key = `${record.subject_id}-${record.section_number}`;
+            if (!acc[key]) {
+                acc[key] = 0;
+            }
+            acc[key] += 1;
+            return acc;
+        }, {});
+
+        // Fetch all subjects, sections, and lecturers
+        const subjects = await database('subjects').select('*').orderBy('id', 'asc');
+        const sections = await database('sections').select('*');
+        const lecturers = await database('lecturer_subjects').select('*');
+
+        // Map sections to their subjects
+        const sectionsMap = sections.reduce((acc, section) => {
+            if (!acc[section.subject_id]) {
+                acc[section.subject_id] = [];
+            }
+            acc[section.subject_id].push(section);
+            return acc;
+        }, {});
+
+
+        // Map subject_id and subject_section to lecturer
+        const lecturersMap = lecturers.reduce((acc, lecturer) => {
+            const key = `${lecturer.subject_id}-${lecturer.subject_section}`;
+            acc[key] = lecturer;
+            return acc;
+        }, {});
+
+        // Combine subjects with their corresponding sections, lecturers, and attendance counts
+        const subjectsWithSectionsAndLecturers = subjects.map(subject => {
+            const subjectSections = sectionsMap[subject.id] || [];
+
+            // Attach the lecturer and attendance count to each section
+            const sectionsWithLecturers = subjectSections.map(section => {
+                // Adjust the key to match both the lecturer's and attendance's subject_id and section_number
+                const key = `${subject.id}-${section.section_number}`;
+
+                return {
+                    ...section,
+                    lecturer: lecturersMap[key] || null, 
+                    totalAttendance: attendanceCountMap[key] || 0 
+                };
+            });
+            return {
+                ...subject,
+                sections: sectionsWithLecturers
+            };
+        });
+
+        // Fetch detailed attendance data for the selected date
+        const result = await database('attendances')
+            .select(
+                'attendances.*',
+                'users.name as student_name',
+                'subjects.name as subject_name',
+                'subjects.code as subject_code',
+                'student_subjects.subject_section as section_number' ,
+                'students.student_id as student_id'
+            )
+            .leftJoin('subjects', 'subjects.id', 'attendances.subject_id')
+            .leftJoin('students', 'students.id', 'attendances.student_id')
+            .leftJoin('users', 'users.id', 'students.user_id')
+            .leftJoin('student_subjects', function() {
+                this.on('student_subjects.subject_id', '=', 'attendances.subject_id')
+                    .andOn('student_subjects.student_id', '=', 'attendances.student_id');
+            })
+            .whereRaw('DATE(attendances.date) = ?', [formattedDate]);
+
+        if (result.length === 0) {
+            return res.status(200).json({
+                message: 'No attendance records found for the specified date.',
+                subjectsWithSectionsAndLecturers
+            });
+        }
+
+        // Return the attendance result and the subjects with sections and lecturers
+        res.json({ result, subjectsWithSectionsAndLecturers });
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+module.exports = { handleDisplayDailyReport };

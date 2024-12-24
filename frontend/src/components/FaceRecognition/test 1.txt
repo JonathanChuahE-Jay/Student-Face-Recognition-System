@@ -1,0 +1,122 @@
+import React, { useEffect, useRef, useState } from "react";
+import Webcam from "react-webcam";
+import * as faceapi from "face-api.js";
+import { Box, Button, Center, Spinner, Text } from "@chakra-ui/react";
+
+const FaceRecognition = () => {
+  const webcamRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [isWebcamActive, setIsWebcamActive] = useState(true);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    const loadModels = async () => {
+      const MODEL_URL = '/models';
+
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      ]);
+      setModelsLoaded(true);
+    };
+
+    loadModels();
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  const getLabeledFaceDescriptions = async () => {
+    const labels = ["admin","mum","pei yee"];
+    return Promise.all(
+      labels.map(async (label) => {
+        const descriptions = [];
+        const img = await faceapi.fetchImage(`http://localhost:5000/uploads/${label}.jpg`);
+        const detections = await faceapi
+          .detectSingleFace(img)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        if (detections) {
+          descriptions.push(detections.descriptor);
+        }
+        return new faceapi.LabeledFaceDescriptors(label, descriptions);
+      })
+    );
+  };
+
+  const handleVideoOnPlay = async () => {
+    const labeledFaceDescriptors = await getLabeledFaceDescriptions();
+    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors);
+
+    intervalRef.current = setInterval(async () => {
+      if (webcamRef.current && webcamRef.current.video.readyState === 4) {
+        const video = webcamRef.current.video;
+        const displaySize = { width: video.videoWidth, height: video.videoHeight };
+
+        faceapi.matchDimensions(canvasRef.current, displaySize);
+
+        // Ensure model is loaded before performing detection
+        if (!modelsLoaded) return;
+
+        const detections = await faceapi
+          .detectAllFaces(video)
+          .withFaceLandmarks()
+          .withFaceDescriptors();
+
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        const ctx = canvasRef.current.getContext('2d');
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        const results = resizedDetections.map((d) => faceMatcher.findBestMatch(d.descriptor));
+        results.forEach((result, i) => {
+          if (resizedDetections[i]) {
+            const box = resizedDetections[i].detection.box;
+            const drawBox = new faceapi.draw.DrawBox(box, { label: result });
+            drawBox.draw(canvasRef.current);
+          }
+        });
+      }
+    }, 200); 
+  };
+
+  return (
+    <Box>
+      {modelsLoaded ? (
+        <>
+          {isWebcamActive ? (
+            <div style={{ position: 'relative', width: '640px', height: '480px' }}>
+              {/* Webcam video */}
+              <Webcam
+                ref={webcamRef}
+                audio={false}
+                width={640}
+                height={480}
+                onUserMedia={handleVideoOnPlay}
+                videoConstraints={{ facingMode: "user" }}
+              />
+              {/* Canvas for face detection */}
+              <canvas
+                ref={canvasRef}
+                style={{ position: 'absolute', top: 0, left: 0 }}
+                width={640}
+                height={480}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <Center flexDirection="column" height="50vh">
+          <Spinner />
+          <Text mt={2}>Loading models...</Text>
+        </Center>
+      )}
+    </Box>
+  );
+};
+
+export default FaceRecognition;

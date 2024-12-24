@@ -1,0 +1,76 @@
+fix cookie /
+show students in attendance only based on their current sem & year (daily report too)
+
+fix logic of current_Student in sections db \
+
+do checkbox for multiple delete /
+1. student / (no delete msg)
+2. lecturer /
+3. subject /
+4. course  /
+
+fix start class /
+
+do face recognition /
+
+face recognition based on class students (need testing) /
+
+face recognition assisgn attendance /
+
+update face path /
+
+dashboard fix 
+
+add next / current class for dashboard
+
+add class start end info /
+add search for face recog / 
+dashboard get current ongoing classes
+
+delete student picture face recognition /
+
+remove crop picture /
+
+fix bounding box width & height /
+
+scan together went out go in
+
+do show attendance url /:name /
+
+do find created_time and compare it with calendar date to update it in sql /
+do show attendance get the section based on the current calendaer date /
+
+do waiting in face recognition when class not yet started
+
+fix accuracy face recognition
+
+create lecturer's subject list /
+// do no course for lecturer /
+
+attendances where lecturer can only take attendance from their own section /
+-> received subject data now need to do is to compare se ctions and subject/
+
+
+do student management for lecturer /
+
+fix lectuerr subjects for dashboard
+main = show today classes data, attendance report (js)
+
+fix student progile /
+
+fix data not show calander lecturer home when no attendance 
+change result into attendanceResult and do the students as studentResult
+students can find total students , attendance find present
+check attended
+
+fix showattendance, all sections did not show students /
+
+do chart lecturer home (total student)
+
+fix searchquery for students management where subjects doesnt filter correctly when not in current intake /
+
+current lecturer for each subject have an lecturer but display no; (subject info/report) /
+
+fix show user in( fix this ) , current date
+
+add gate / 

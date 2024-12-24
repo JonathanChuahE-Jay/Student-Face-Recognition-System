@@ -1,0 +1,11 @@
+/* Default calendar styling based on color mode */
+.react-calendar {
+    background-color: var(--chakra-colors-background); /* Light mode background */
+    color: var(--chakra-colors-black); /* Light mode text color */
+}
+  
+/* Highlighting the current day */
+.react-calendar__tile--now {
+    background-color: var(--chakra-colors-blue-200); /* Light mode current day background */
+    color: var(--chakra-colors-black); /* Light mode current day text color */
+}

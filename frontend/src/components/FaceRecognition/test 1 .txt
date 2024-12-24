@@ -1,0 +1,214 @@
+import React, { useRef, useEffect, useState } from "react";
+import Webcam from "react-webcam";
+import * as faceapi from "face-api.js";
+import { Box, Button, Center, Flex, Image, Spinner, useToast } from "@chakra-ui/react";
+import axios from "axios";
+
+const FaceCapture = ({ onClose, createdUser }) => {
+  const webcamRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [croppedFace, setCroppedFace] = useState(null);
+  const [isWebcamActive, setIsWebcamActive] = useState(true);
+  const intervalRef = useRef(null);
+  
+  const toast = useToast();
+  useEffect(() => {
+    const loadModels = async () => {
+      const MODEL_URL = '/models';
+      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+      setModelsLoaded(true);
+    };
+    loadModels();
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  const handleVideoOnPlay = () => {
+    intervalRef.current = setInterval(async () => {
+      if (webcamRef.current && webcamRef.current.video.readyState === 4) {
+        const video = webcamRef.current.video;
+        const displaySize = { width: video.videoWidth, height: video.videoHeight };
+
+        faceapi.matchDimensions(canvasRef.current, displaySize);
+
+        try {
+          const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks()
+            .withFaceExpressions();
+
+          if (detections.length > 0) {
+            const resizedDetections = faceapi.resizeResults(detections, displaySize);
+            const ctx = canvasRef.current.getContext('2d');
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+            resizedDetections.forEach(detection => {
+              if (detection && detection.detection.box) {
+                faceapi.draw.drawDetections(canvasRef.current, [detection]);
+                faceapi.draw.drawFaceLandmarks(canvasRef.current, [detection]);
+                faceapi.draw.drawFaceExpressions(canvasRef.current, [detection]);
+              }
+            });
+          } else {
+            console.log('No faces detected');
+          }
+        } catch (error) {
+          console.error('Error during face detection:', error);
+        }
+      }
+    }, 400);
+  };
+
+  const captureImage = async () => {
+    const video = webcamRef.current.video;
+
+    // Perform face detection
+    const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceExpressions();
+
+    if (detections.length > 0) {
+      // Get the first face's bounding box
+      const faceBox = detections[0].detection.box;
+
+      // Create a canvas to extract the face region
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = faceBox.width;
+      tempCanvas.height = faceBox.height;
+      const ctx = tempCanvas.getContext("2d");
+
+      // Draw the face region from the webcam's video stream
+      ctx.drawImage(
+        video,
+        faceBox.x, faceBox.y, faceBox.width, faceBox.height,
+        0, 0, faceBox.width, faceBox.height
+      );
+
+      // Get the cropped face image as base64
+      const croppedImage = tempCanvas.toDataURL("image/jpeg");
+      setCroppedFace(croppedImage);
+    }
+
+    setIsWebcamActive(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
+
+  const retakeImage = () => {
+    setCroppedFace(null);
+    setIsWebcamActive(true);
+    handleVideoOnPlay();
+  };
+
+  const saveCroppedFace = async () => {
+    if (croppedFace) {
+        const byteString = atob(croppedFace.split(',')[1]);
+        const mimeString = croppedFace.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new Uint8Array(byteString.length);
+        for (let i = 0; i < byteString.length; i++) {
+            ab[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString }); 
+
+        const formData = new FormData();
+        formData.append('image', blob, `${createdUser.name}.jpg`); 
+
+        formData.append('user_id', createdUser.user_id); 
+
+        try {
+            const response = await axios.post('http://localhost:5000/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            toast({
+              position: 'top-right',
+              title: 'Success',
+              description: response.data.message || 'Image uploaded successfully.',
+              status: 'success',
+              duration: 1000,
+              isClosable: true,
+            });
+            onClose();
+          } catch (error) {
+            const errorMessage = error.response?.data?.error || error.message || 'An error occurred. Please try again.';
+            console.error('Error uploading image:', error);
+            toast({
+              position: 'top-right',
+              title: 'Error',
+              description: errorMessage,
+              status: 'error',
+              duration: 1000,
+              isClosable: true,
+            });
+          }
+    }
+  };
+  return (
+    <Box>
+      {modelsLoaded ? (
+        <>
+          {isWebcamActive ? (
+            <Box style={{ position: 'relative', width: '640px', height: '480px' }}>
+              {/* Webcam video */}
+              <Webcam
+                ref={webcamRef}
+                audio={false}
+                width={640}
+                height={480}
+                screenshotFormat="image/jpeg"
+                onUserMedia={handleVideoOnPlay}
+                videoConstraints={{ facingMode: "user" }}
+              />
+              {/* Canvas for face detection */}
+              <canvas
+                ref={canvasRef}
+                style={{ position: 'absolute', top: 0, left: 0 }}
+                width={640}
+                height={480}
+              />
+            </Box>
+          ) : (
+            <>
+              {croppedFace && (
+                <Center>
+                  <Image height='40vh' src={croppedFace} alt="Cropped face" />
+                </Center>
+              )}
+              <Flex mt={2} justifyContent='space-between'>
+                <Button width='45%' onClick={retakeImage}>Retake</Button>
+                <Button width='45%' onClick={saveCroppedFace}>Continue</Button>
+              </Flex>
+            </>
+          )}
+
+          {!isWebcamActive && !croppedFace && (
+            <p>Processing image...</p>
+          )}
+
+          {isWebcamActive && (
+            <Flex mt={2} justifyContent='space-between'>
+              <Button width='45%' colorScheme="red" onClick={onClose}>Maybe Later</Button>
+              <Button width='45%' colorScheme="teal" onClick={captureImage}>Capture Image</Button>
+            </Flex>
+          )}
+        </>
+      ) : (
+        <Center flexDirection='column' height='50vh'>
+          <Spinner />
+          <p>Loading models...</p>
+        </Center>
+      )}
+    </Box>
+  );
+};
+
+export default FaceCapture;
