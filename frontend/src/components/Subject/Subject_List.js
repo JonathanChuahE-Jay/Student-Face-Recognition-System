@@ -43,7 +43,6 @@ const SubjectList = ({searchQuery, user, fetchData, paginatedData, isDisabled, f
         }));
     };
 
-    // Handle select all checkbox
     const handleSelectAll = () => {
         const allChecked = paginatedData.every(subject => checkedItems[subject.id]);
 
@@ -121,7 +120,7 @@ const SubjectList = ({searchQuery, user, fetchData, paginatedData, isDisabled, f
             });
         }
     }, [checkedItems, fetchData, toast]);
-    
+    console.log(user)
     return (
         <Box minHeight="350px" mt={5}>
             {filteredData.length === 0 ? (
@@ -205,21 +204,25 @@ const SubjectList = ({searchQuery, user, fetchData, paginatedData, isDisabled, f
 
                                         }
                                         
-
-                                        <Tooltip isDisabled={isDisabled} label='Attendance' fontSize='md'>
-                                            <Button
-                                                padding='5px'
-                                                colorScheme="blue"
-                                                onClick={() => handleAttendanceNavigation(subject)}
-                                                ml={2}
-                                                minWidth={buttonMinWidth}
-                                                size={buttonSize}
-                                                textAlign="center"
-                                            >
-                                                <CalendarIcon ml={1} mr={1} />
-                                                {calendarLabel}
-                                            </Button>
-                                        </Tooltip>
+                                        {
+                                            (user.role ==='admin' || user.role ==='lecturer') && (
+                                                <Tooltip isDisabled={isDisabled} label='Attendance' fontSize='md'>
+                                                    <Button
+                                                        padding='5px'
+                                                        colorScheme="blue"
+                                                        onClick={() => handleAttendanceNavigation(subject)}
+                                                        ml={2}
+                                                        minWidth={buttonMinWidth}
+                                                        size={buttonSize}
+                                                        textAlign="center"
+                                                    >
+                                                        <CalendarIcon ml={1} mr={1} />
+                                                        {calendarLabel}
+                                                    </Button>
+                                                </Tooltip>
+                                            )
+                                        }
+                                        
                                         {
                                             user.role ==='admin' && (
                                                 <Tooltip isDisabled={isDisabled} label='Delete' fontSize='md'>

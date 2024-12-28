@@ -74,3 +74,6 @@ current lecturer for each subject have an lecturer but display no; (subject info
 fix show user in( fix this ) , current date
 
 add gate / 
+
+
+fix attendance / time for each subject based on the day (eg: monday, will only have monday) /

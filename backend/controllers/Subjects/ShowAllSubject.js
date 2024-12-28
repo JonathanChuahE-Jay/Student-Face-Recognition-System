@@ -1,13 +1,16 @@
 const handleShowAllSubjects = (database) => async (req, res) => {
     try {
-        const { lecturer_id, id_not_include } = req.query;
+        const { lecturer_id, id_not_include, student_id } = req.query;
 
+        const role = student_id? "student" : "lecturer"; 
         // Fetch only lecturer's subject if lecturer_id is provided
-        let subjectAssignmentsQuery = database.select('*').from('lecturer_subjects');
+        let subjectAssignmentsQuery = database.select('*').from(`${role}_subjects`);
         if (lecturer_id) {
             subjectAssignmentsQuery = subjectAssignmentsQuery.where({ lecturer_id });
         } else if (id_not_include) {
             subjectAssignmentsQuery = subjectAssignmentsQuery.whereNot({ lecturer_id: id_not_include });
+        }else if (student_id){
+            subjectAssignmentsQuery = subjectAssignmentsQuery.where({ student_id });
         }
 
         // Execute the query to get subject
@@ -18,7 +21,7 @@ const handleShowAllSubjects = (database) => async (req, res) => {
         
         // Fetch only relevant subjects based on the subject IDs for the lecturer
         const subjectsQuery = database.select('*').from('subjects');
-        if (lecturer_id) {
+        if (lecturer_id || student_id) {
             subjectsQuery.whereIn('id', subjectIds);
         }
         const subjects = await subjectsQuery;
@@ -83,7 +86,6 @@ const handleShowAllSubjects = (database) => async (req, res) => {
             }))
         }));
 
-        // Send response
         res.json(subjectsWithSections);
     } catch (error) {
         console.error('Error fetching data:', error);

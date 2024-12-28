@@ -69,74 +69,53 @@ const SubjectManagement = ({searchQuery, user}) => {
   const prevSearchQueryRef = useRef(searchQuery);
   const [currentPage, setCurrentPage] = useState(parseInt(page) || 1);
 
-  console.log(data)
-  const fetchData = () => {
+  const fetchData = async () => {
     setIsLoading(true);
-    if(user.role === 'admin'){
-      axios.get("http://localhost:5000/show-all-subjects")
-      .then((response) => {
-        const sortedData = response.data.sort((a, b) => a.id - b.id);
-        setData(sortedData);
-        setFilteredData(sortedData);
-      })
-      .catch((error) => {
-        console.error("Error fetching data:", error);
-        toast({
-          title: 'Error',
-          position: 'top-right',
-          description: `${error.response?.data?.error || error.message}`,
-          status: 'error',
-          duration: 1000,
-          isClosable: true,
+  
+    try {
+      if (user.role === 'admin') {
+        const [subjectsResponse, coursesResponse] = await Promise.all([
+          axios.get("http://localhost:5000/show-all-subjects"),
+          axios.get("http://localhost:5000/show-all-courses"),
+        ]);
+  
+        const sortedSubjects = subjectsResponse.data.sort((a, b) => a.id - b.id);
+        setData(sortedSubjects);
+        setFilteredData(sortedSubjects);
+        setCourses(coursesResponse.data);
+  
+      } else if (user.role === 'lecturer') {
+        const response = await axios.get("http://localhost:5000/show-all-subjects", {
+          params: { lecturer_id: user.id },
         });
-      })
-      axios.get('http://localhost:5000/show-all-courses')
-        .then(response => {
-            setCourses(response.data);
-        })
-        .catch(error => {
-            console.error('Error fetching courses and subjects:', error);
-            toast({
-              title: 'Error',
-              position: 'top-right',
-              description: `${error.response?.data?.error || error.message}`,
-              status: 'error',
-              duration: 1000,
-              isClosable: true,
-            });
-        }).finally(() => {
-          setIsLoading(false);
+  
+        const sortedSubjects = response.data.sort((a, b) => a.id - b.id);
+        setData(sortedSubjects);
+        setFilteredData(sortedSubjects);
+      } else if (user.role === 'student') {
+        const response = await axios.get("http://localhost:5000/show-all-subjects", {
+          params: { student_id: user.id },
+        });
+  
+        const sortedSubjects = response.data.sort((a, b) => a.id - b.id);
+        setData(sortedSubjects);
+        setFilteredData(sortedSubjects);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: 'Error',
+        position: 'top-right',
+        description: error.response?.data?.error || error.message || 'An unexpected error occurred.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
       });
-    }else if (user.role === 'lecturer') {
-      const fetchLecturerSubjects = async () => {
-          try {
-              setIsLoading(true); 
-              const response = await axios.get('http://localhost:5000/show-all-subjects', {
-                  params: { lecturer_id: user.id }
-              });
-              const sortedData = response.data.sort((a, b) => a.id - b.id);
-              setData(sortedData);
-              setFilteredData(sortedData);
-          } catch (error) {
-              console.error('Error fetching data:', error);
-              toast({
-                  title: 'Error',
-                  position: 'top-right',
-                  description: error.response?.data?.error || 'Failed to load subjects.',
-                  status: 'error',
-                  duration: 3000,
-                  isClosable: true,
-              });
-          } finally {
-              setIsLoading(false); 
-          }
-      };
-  
-      fetchLecturerSubjects(); 
-  }
-  
-    
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
 
   useEffect(() => {
     fetchData();
@@ -160,7 +139,11 @@ const SubjectManagement = ({searchQuery, user}) => {
   };
 
   const handleMoreInfo = (subject) => {
-    navigate(`/subject-info/${subject.name}`, { state: { subject } });
+    console.log(subject)
+    user.role === 'student'?
+    navigate(`/subject-student-info/${subject.name}`, { state: { subject } })
+    :
+    navigate(`/subject-info/${subject.name}`, { state: { subject } })
   };
   
 

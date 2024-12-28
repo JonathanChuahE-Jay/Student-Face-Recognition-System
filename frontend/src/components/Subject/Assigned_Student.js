@@ -43,11 +43,12 @@ import {
     AlertDialogHeader,
     AlertDialogBody,
     AlertDialogFooter,
+    Spinner 
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { AddIcon, DeleteIcon, Search2Icon } from '@chakra-ui/icons';
 import { FiFilter } from 'react-icons/fi';
-import AddStudentModal from './Add_Student_Modal';
+import AssignStudentModal from './Assign_Student_Modal';
 
 const AssignedStudent = ({ search, user, height, subject_id }) => {
     const [students, setStudents] = useState([]);
@@ -58,6 +59,7 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
     const [sectionFilters, setSectionFilters] = useState([]);
     const [subjectSections,setSubjectSections] = useState([]);
     const [selectedStudent, setSelectedStudent] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const toast = useToast();
 
@@ -71,6 +73,7 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
     },[search])
     
     const fetchData = async () => {
+        setIsLoading(true);
         try {
             const response = await axios.post('/display-assigned-student-and-lecturer', { subject_id });
             const { students, lecturers, subject, sections } = response.data;
@@ -88,6 +91,8 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
                 duration: 1000,
                 isClosable: true,
             });
+        }finally{
+            setIsLoading(false);
         }
     };
     
@@ -97,19 +102,21 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
 
     useEffect(() => {
         const filtered = students.filter(student => {
-            const section = (student.subject_section || 'N/A').toString().toLowerCase();
-            const currentYear = (student.current_year || 'N/A').toString().toLowerCase();
-            const currentSemester = (student.current_semester || 'N/A').toString().toLowerCase();
-            const search = searchQuery.toLowerCase();
-    
+            const section = (student.subject_section || '').toString().toLowerCase();
+            const currentYear = (student.current_year || '').toString().toLowerCase();
+            const currentSemester = (student.current_semester || '').toString().toLowerCase();
+            const search = searchQuery ? searchQuery.toLowerCase() : '';
+
             const isInSectionFilter = sectionFilters.length === 0 || sectionFilters.includes(section);
     
             return isInSectionFilter &&
-                   ((student.name && student.name.toLowerCase().includes(search)) ||
-                   (student.student_id && student.student_id.toLowerCase().includes(search)) ||
-                   (`section: ${section}`).includes(search) ||
-                   (`year ${currentYear} semester ${currentSemester}`).includes(search) ||
-                   (getLecturerName(student.subject_section) && getLecturerName(student.subject_section).toLowerCase().includes(search)));
+                ((student.name && student.name.toLowerCase().includes(search)) || 
+                (student.student_id && student.student_id.toLowerCase().includes(search)) ||
+                (`section: ${section}`).includes(search) ||
+                (`year ${currentYear} semester ${currentSemester}`).includes(search) ||
+                (getLecturerName(student.subject_section) && getLecturerName(student.subject_section).toLowerCase().includes(search))
+            );
+
         });
     
         setFilteredStudents(filtered);
@@ -136,6 +143,7 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
         onOpenDeleteAlert();
     }
     const handleDeleteStudent = (student) => {
+        setIsLoading(true);
         axios.post('http://localhost:5000/alter-assigned-student', {
             selectedStudents: [student],
             mode: 'DELETE',
@@ -175,7 +183,8 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
                 duration: 1000,
                 isClosable: true,
             });
-        });
+        })
+        setIsLoading(false);
     }
     return (
         <Box overflowY='scroll' p={2} maxW="container.xl" mx="auto" borderWidth={1} borderRadius="lg" boxShadow="xl" height={height??'100%'}>
@@ -261,31 +270,37 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
                                     </Td>
                                     <Td>{getLecturerName(student.subject_section)}</Td>
                                     {
-                                        user.role === 'admin'&&
-                                            <Td><IconButton onClick={()=>handleDeleteAlert(student)} colorScheme='red' icon={<DeleteIcon/>}/></Td>
-                                        
+                                        user.role === 'admin' && 
+                                            <Td>
+                                                <IconButton onClick={() => handleDeleteAlert(student)} colorScheme='red' icon={<DeleteIcon />} />
+                                            </Td>
                                     }
-                                    
                                 </Tr>
                             ))
+                        ) : isLoading ? (
+                            <Tr>
+                                <Td colSpan={7} textAlign="center">
+                                    <Spinner size="lg" />
+                                </Td>
+                            </Tr>
                         ) : (
                             <Tr>
-                                <Td color='red' colSpan={6} >No students found</Td>
+                                <Td color='red' colSpan={7}>No students found</Td>
                             </Tr>
                         )}
                     </Tbody>
                 </Table>
             </TableContainer>
             {
-                user.role === 'admin'&& <Button width='100%' mt={5} onClick={onOpenAddStudentModal}><AddIcon mr={1} />Add student</Button>
+                user.role === 'admin'&& <Button width='100%' mt={5} onClick={onOpenAddStudentModal}><AddIcon mr={1} />Assign student</Button>
             }
             <Modal scrollBehavior='inside' size='6xl' isOpen={isOpenAddStudentModal} onClose={onCloseAddStudentModal}>
                 <ModalOverlay/>
                 <ModalContent>
-                    <ModalHeader>Add student</ModalHeader>
+                    <ModalHeader>Assign student</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody>
-                        <AddStudentModal subject_sections={subjectSections} exisitingStudents={filteredStudents} onRefresh={fetchData} subject={subject} subject_id={subject_id} onClose={onCloseAddStudentModal}/>
+                        <AssignStudentModal subject_sections={subjectSections} exisitingStudents={filteredStudents} onRefresh={fetchData} subject={subject} subject_id={subject_id} onClose={onCloseAddStudentModal}/>
                     </ModalBody>
                 </ModalContent>
             </Modal>
@@ -320,6 +335,8 @@ const AssignedStudent = ({ search, user, height, subject_id }) => {
             </AlertDialog>
         </Box>
     );
+    
+    
 };
 
 

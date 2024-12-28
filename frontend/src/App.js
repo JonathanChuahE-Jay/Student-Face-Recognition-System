@@ -26,6 +26,8 @@ import FaceRecognition from "./components/FaceRecognition/Face_Recognition";
 import { FaHome, FaBook, FaClipboardList, FaUserGraduate, FaChalkboardTeacher } from 'react-icons/fa';
 import { MdInsertDriveFile } from "react-icons/md";
 import Gate from "./Context/GateProvider";
+import NotAuthorized from "./Pages/Unauthorized/Not_Authorized";
+import SubjectStudentInfo from "./components/Subject/Subject_Student_Info";
 
 
 const ICON_SIZE = { large: "25px", medium: "20px" };
@@ -43,6 +45,11 @@ const roleBasedLinks = {
     { path: "/", label: "Home", icon: <FaHome fontSize={ICON_SIZE.large} /> },
     { path: "/subject-management/page/1", label: "Subject Management", icon: <FaClipboardList fontSize={ICON_SIZE.medium} /> },
     { path: "/student-management/page/1", label: "Student Management", icon: <FaUserGraduate fontSize={ICON_SIZE.medium} /> },
+  ],
+  student: [
+    { path: "/", label: "Home", icon: <FaHome fontSize={ICON_SIZE.large} /> },
+    { path: "/subject-management/page/1", label: "Subject Management", icon: <FaClipboardList fontSize={ICON_SIZE.medium} /> },
+    
   ]
 };
 
@@ -202,9 +209,10 @@ const App = () => {
                           user={user}
                         />
                       }
-                      {user.role === "student" && <StudentHome searchQuery={searchQuery} />}
+                      {user.role === "student" && <StudentHome searchQuery={searchQuery} user={user}/>}
                     </Gate>
                   ) : (
+
                     <Navigate to="/login" />
                   )
                 }
@@ -247,7 +255,7 @@ const App = () => {
               <Route
                 path="/subject-management/page/:page"
                 element={
-                  <Gate role={user.role} allowedRoles={["admin", "lecturer"]}>
+                  <Gate role={user.role} allowedRoles={["admin", "lecturer","student"]}>
                     <ShowAllSubject user={user} searchQuery={searchQuery} />
                   </Gate>
                 }
@@ -293,6 +301,14 @@ const App = () => {
                 }
               />
               <Route
+                path="/subject-student-info/:subject_name"
+                element={
+                  <Gate user={user} role={user.role} allowedRoles={["student"]}>
+                    <SubjectStudentInfo user={user} searchQuery={searchQuery} />
+                  </Gate>
+                }
+              />
+              <Route
                 path="/report"
                 element={
                   <Gate role={user.role} allowedRoles={["admin", "lecturer"]}>
@@ -307,6 +323,10 @@ const App = () => {
                     <FaceRecognition searchQuery={searchQuery} isMobile={isMobile} user={user} />
                   </Gate>
                 }
+              />
+              <Route
+                path="/not-authorized"
+                element={<NotAuthorized redirectPath={roleBasedLinks[user.role]?.[0]?.path || "/"} />}
               />
             </Routes>
           </Box>

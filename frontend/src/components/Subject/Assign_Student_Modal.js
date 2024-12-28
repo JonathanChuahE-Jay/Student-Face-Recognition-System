@@ -33,7 +33,7 @@ import {
 import axios from 'axios';
 import { ChevronLeftIcon, ChevronRightIcon, DeleteIcon, Search2Icon } from '@chakra-ui/icons';
 
-const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject_id, subject , onRefresh}) => {
+const AssignStudentModal = ({ subject_sections, exisitingStudents, onClose, subject_id, subject , onRefresh}) => {
     const [allStudents, setAllStudents] = useState([]);
     const [selectedStudents, setSelectedStudents] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -62,7 +62,6 @@ const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject
 
     const handleStudentSelect = (student) => {
         if (selectedStudents.some(s => s.id === student.id)) {
-            // Remove student if already selected
             setSelectedStudents(selectedStudents.filter(s => s.id !== student.id));
         } else {
             if(!selectedSection){
@@ -76,7 +75,6 @@ const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject
                   })
 
             }else{
-                // Add student to selected list with the selected section
                 const studentWithSection = { ...student, subject_section: parseInt(selectedSection, 10), subject_id };
                 setSelectedStudents([...selectedStudents, studentWithSection]);
             }
@@ -86,7 +84,7 @@ const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject
     const handleAddStudents = () => {
         axios.post('http://localhost:5000/alter-assigned-student', {
             selectedStudents,
-            mode: 'Assign',
+            mode: 'Alter',
             subject_id
         })
         .then(response => {
@@ -134,7 +132,6 @@ const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject
         setSelectedSection(section);
     }
 
-    // Filter students based on search query
     const filteredStudents = allStudents.filter(student =>
         student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -298,7 +295,7 @@ const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject
             <ModalFooter display='flex' justifyContent='space-between'>
                 <Button width='40%' colorScheme="red" onClick={onClose}>Cancel</Button>
                 <Button width='40%' colorScheme="blue" mr={3} onClick={handleAddStudents} isDisabled={selectedStudents.length === 0}>
-                    Add Students
+                    Assign Students
                 </Button>
             </ModalFooter>
             <AlertDialog isCentered isOpen={isOpenIncreaseCapacity} onClose={onCloseIncreaseCapacity}>
@@ -329,4 +326,4 @@ const AddStudentModal = ({ subject_sections, exisitingStudents, onClose, subject
     );
 };
 
-export default AddStudentModal;
+export default AssignStudentModal;

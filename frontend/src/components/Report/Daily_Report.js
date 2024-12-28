@@ -34,8 +34,8 @@ const DailyReport = ({searchQuery}) => {
   const [counts, setCounts] = useState({ Present: 0, Absent: 0, Excused: 0 });
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState('');
+  const [dateDay, setDateDay] = useState('');
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [subjectsPerPage] = useState(10); 
 
@@ -102,6 +102,7 @@ const DailyReport = ({searchQuery}) => {
 
   useEffect(() => {
     fetchDailyReport();
+    getDayOfWeek();
   }, [date]);
 
   const formatTime = (isoDate) => {
@@ -125,7 +126,6 @@ const DailyReport = ({searchQuery}) => {
   )
   : data;
 
-  // Pagination logic
   const paginatedData = filteredSubjects.slice(
     (currentPage - 1) * subjectsPerPage,
     currentPage * subjectsPerPage
@@ -133,7 +133,6 @@ const DailyReport = ({searchQuery}) => {
 
   const totalPages = Math.ceil(filteredSubjects.length / subjectsPerPage);
 
-  // Determine page range to display
   const maxPageButtons = 6;
   let startPage, endPage;
 
@@ -153,6 +152,13 @@ const DailyReport = ({searchQuery}) => {
       endPage = currentPage + halfRange;
     }
   }
+  const getDayOfWeek = () => {
+    if (!date) return "";
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dateObj = new Date(date);
+    setDateDay(days[dateObj.getDay()]);
+  };
+
   return (
     <Flex direction="column" align="center" justify="center" minH="100vh" p={4} bg={bgColor}>
       <Box width="full" maxW="1200px" p={6} bg={cardBgColor} borderRadius="md" shadow="md">
@@ -187,9 +193,11 @@ const DailyReport = ({searchQuery}) => {
               <Th>Subjects</Th>
               <Th>Total Sections</Th>
               <Th>Total Lecturers</Th>
-              <Th>Total Students</Th>
+              <Th>Total Students (Overall)</Th>
+              <Th>Total Students (actual day)  ({dateDay})</Th>
               <Th>Total Attended Today</Th>
-              <Th>Total Attended Percentage %</Th>
+              <Th>Total Overall Attended Percentage%</Th>
+              <Th>Total Today Attended Percentage%</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -204,6 +212,12 @@ const DailyReport = ({searchQuery}) => {
                       0
                     )
                   : 0;
+                const totalStudentsActualDay = subject.sections
+                ? subject.sections.reduce(
+                    (total, section) => total + Number(section.totalStudentsCurrentDay|| 0),
+                    0
+                  )
+                : 0;
                 const totalLecturer = subject.sections
                   ? subject.sections.reduce(
                       (total, section) => total + (section.lecturer ? 1 : 0),
@@ -214,8 +228,13 @@ const DailyReport = ({searchQuery}) => {
                 const attended = attendedSections.length > 0
                   ? attendedSections.reduce((total, attendance) => total + attendance, 0)
                   : 0;
-                const attendedPercentage = totalStudents > 0
+
+                const overallAttendedPercentage = totalStudents  > 0
                   ? ((attended / totalStudents) * 100).toFixed(2)
+                  : "0.00";
+
+                const todayAttendedPercentage = totalStudentsActualDay  > 0
+                  ? ((attended / totalStudentsActualDay) * 100).toFixed(2)
                   : "0.00";
 
                 return (
@@ -225,8 +244,10 @@ const DailyReport = ({searchQuery}) => {
                     <Td>{subject.number_of_sections || 0}</Td>
                     <Td>{totalLecturer}</Td>
                     <Td>{totalStudents}</Td>
+                    <Td>{totalStudentsActualDay}</Td>
                     <Td>{attended}</Td>
-                    <Td>{attendedPercentage}%</Td>
+                    <Td>{overallAttendedPercentage}%</Td>
+                    <Td>{todayAttendedPercentage}%</Td>
                   </Tr>
                 );
               })
