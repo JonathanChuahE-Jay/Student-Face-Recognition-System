@@ -113,12 +113,16 @@ const AssignedLecturer = ({ search, height, subject_id, user }) => {
             });
         }
     };
-
-    const filteredLecturers = lecturers.filter((lecturer) => 
-        (lecturer.name && lecturer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (lecturer.subject_section && lecturer.subject_section.toString().toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (`Section: ${lecturer.subject_section}`).toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredLecturers = (searchQuery && searchQuery.length > 0)
+    ? lecturers.filter((lecturer) => {
+        if (!lecturer) return false;  
+        return (
+          (lecturer.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (lecturer.subject_section?.toString().toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (`Section: ${lecturer.subject_section}`.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+      }) 
+    : lecturers; 
     
     const sectionsToDisplay = searchQuery
         ? filteredLecturers.map(lecturer => lecturer.subject_section)

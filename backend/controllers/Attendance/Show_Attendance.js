@@ -3,7 +3,6 @@ const handleShowAttendance = (database) => async (req, res) => {
 
     try {
         if (student_id && !subject_id) {
-            // Fetch attendance records for the student
             const studentAttendance = await database('attendances')
                 .where({ student_id })
                 .select('*');
@@ -47,7 +46,7 @@ const handleShowAttendance = (database) => async (req, res) => {
                 message: 'Student attendance records fetched successfully',
                 studentAttendance: attendanceWithDetails
             });
-        } else if (subject_id && selectedSection && calendarDate) { // Corrected condition
+        } else if (subject_id && selectedSection && calendarDate) {
             // Fetch student-related subjects
             const studentSubjects = await database('student_subjects')
                 .leftJoin('students', 'student_subjects.student_id', 'students.id')

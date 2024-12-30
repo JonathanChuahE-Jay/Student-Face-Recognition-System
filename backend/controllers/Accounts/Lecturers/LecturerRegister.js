@@ -21,7 +21,7 @@ const handleLecturerRegister = (database, bcrypt) => async (req, res) => {
     let { profile_picture } = req.body;
 
     // Trim the email to remove any leading or trailing spaces
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
 
     // Validate required fields
     if (!lecturer_id || !name || !trimmedEmail || !password) {

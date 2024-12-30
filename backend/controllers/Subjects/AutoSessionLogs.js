@@ -10,9 +10,13 @@ const handleAutoSessionLogs = (database) => async (req, res) => {
         const formattedDate = malaysiaDate.toISOString().split('T')[0];
         const formattedTime = malaysiaDate.toISOString().split('T')[1].slice(0, 8);
 
+        const currentDay = malaysiaDate.toLocaleString('en-US', { weekday: 'long' });
+
         // Fetch sections that have a start time greater than or equal to the formatted time
         const sections = await database('sections')
-            .whereRaw('CAST(start_time AS time) <= ? ', [formattedTime]);
+            .where('day', currentDay)
+            .whereRaw('CAST(start_time AS time) <= ? ', [formattedTime])
+            .whereRaw('CAST(end_time AS time) >= ?', [formattedTime]);
 
         // Fetch session logs for each section
         const sessionLogs = await Promise.all(

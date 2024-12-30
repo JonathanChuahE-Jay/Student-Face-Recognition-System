@@ -6,15 +6,18 @@ const handleAutoAddAttendance = (database) => async (req, res) => {
     const formattedDate = malaysiaDate.toISOString().split('T')[0];
     const formattedTime = malaysiaDate.toISOString().split('T')[1].slice(0, 8);
 
+    const currentDay = malaysiaDate.toLocaleString('en-US', { weekday: 'long' });
+
     try {
-        // Fetch session logs for today's date
         const sessionLog = await database('session_logs')
             .where({ created_for: formattedDate })
-            .whereRaw('start_time <= ?', [formattedTime]);
+            .whereRaw('start_time <= ?', [formattedTime])
+            .andWhereRaw('end_time >= ?', [formattedTime]);
 
         for (const session of sessionLog) {
             const section = await database('sections')
                 .where('id', session.section_id)
+                .andWhere('day', currentDay) 
                 .first(); 
 
             if (section) {
@@ -49,7 +52,6 @@ const markStudentsAbsent = async (database, subject_id, section_number, today) =
         const endOfDay = new Date(startOfDay);
         endOfDay.setDate(endOfDay.getDate() + 1);
 
-        // Check if the attendance record already exists for each student before inserting
         for (const student of studentsInSection) {
             const existingRecord = await database('attendances')
                 .where('student_id', student.id)
@@ -59,7 +61,6 @@ const markStudentsAbsent = async (database, subject_id, section_number, today) =
                 .first();
 
             if (!existingRecord) {
-                // Insert attendance record if it doesn't exist
                 await database('attendances')
                     .insert({
                         student_id: student.id,

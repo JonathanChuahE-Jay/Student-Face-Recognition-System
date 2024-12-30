@@ -148,17 +148,24 @@ const Show_Attendance = ({searchQuery, user}) => {
         if (!sectionTime || sectionTime.length === 0) return;
         const currentTime = new Date();
     
+
         const updatedStartClass = sectionTime.map((section) => {
             const startTime = new Date();
             const endTime = new Date();
     
+            const today = new Date();
+            const malaysiaTimeOffset = 8 * 60 * 60 * 1000;
+            const malaysiaDate = new Date(today.getTime() + malaysiaTimeOffset);
+            const currentDay = malaysiaDate.toLocaleString('en-US', { weekday: 'long' });
+
             const [startHours, startMinutes] = section.start_time ? section.start_time.split(':') : ["0", "0"];
             const [endHours, endMinutes] = section.end_time ? section.end_time.split(':') : ["23", "59"];
+            const sectionDay = section.day?? section.day; 
     
             startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0);
             endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0);
     
-            return currentTime >= startTime && currentTime <= endTime;
+            return currentTime >= startTime && currentTime <= endTime && sectionDay == currentDay;
         });
     
         setStartClass(updatedStartClass);

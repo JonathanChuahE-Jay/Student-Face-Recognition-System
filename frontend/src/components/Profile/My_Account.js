@@ -4,7 +4,8 @@ import {
     Flex, Avatar, AvatarBadge, Collapse,
     InputGroup,
     InputRightElement,
-    IconButton
+    IconButton,
+    Divider
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { EditIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
@@ -236,8 +237,8 @@ const MyAccount = ({onRefresh}) => {
                         type="email"
                     />
                 </FormControl>
-
-                <FormControl id="oldPassword" mt={4} width="100%">
+                <Divider mt={2}/>
+                <FormControl id="oldPassword" mt={2} width="100%">
                     <FormLabel>Old Password</FormLabel>
                     <InputGroup>
                         <Input

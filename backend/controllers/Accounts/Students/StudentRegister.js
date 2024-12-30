@@ -7,7 +7,7 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const numeric_student_id = student_id ? student_id.replace(/[A-Za-z]/g, '') : null;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
