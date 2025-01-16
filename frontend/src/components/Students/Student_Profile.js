@@ -9,6 +9,8 @@ import { useTooltip } from '../../Context/ToolTipContext';
 import ViewStudentCourse from './View_Student_Course';
 import RadioCard from '../Radio/Radio_Card';
 import Timetable from '../Timetable/Timetable';
+import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 
 const MotionFlex = motion(Flex);
 const MotionBox = motion(Box);
@@ -74,7 +76,6 @@ const StudentProfile = ({ user, searchQuery }) => {
             const res = await axios.post('/display-assigned-subjects', { student_id });
             const { subjectData, time_and_venue } = res.data;
             
-            // Filter subjects based on year and semester
             const filteredSubjects = subjectData.reduce((acc, { subject_id, code, name, section, year, semester }) => {
                 if (parseInt(year, 10) === parseInt(studentData.current_year, 10) &&
                     parseInt(semester, 10) === parseInt(studentData.current_semester, 10)) {
@@ -83,13 +84,11 @@ const StudentProfile = ({ user, searchQuery }) => {
                         acc[subject_id] = { code, name, sections: new Map() };  // Add code and name here
                     }
                     
-                    // Initialize section data
                     acc[subject_id].sections.set(section, { time: [], venue: [], day: [] });
                 }
                 return acc;
             }, {});
     
-            // Map time_and_venue to the corresponding subject and section
             time_and_venue.forEach(({ subject_id, section_number, start_time, end_time, venue, day }) => {
                 if (filteredSubjects[subject_id] && filteredSubjects[subject_id].sections.has(section_number)) {
                     const sectionData = filteredSubjects[subject_id].sections.get(section_number);
@@ -99,7 +98,6 @@ const StudentProfile = ({ user, searchQuery }) => {
                 }
             });
     
-            // Set subjects in the state
             setSubjects(
                 Object.keys(filteredSubjects).reduce((acc, subjectId) => {
                     acc[subjectId] = {
@@ -152,7 +150,6 @@ const StudentProfile = ({ user, searchQuery }) => {
         }
     };
     
-    // Function to handle status changes
     const handleStatusChange = (recordId, value) => {
         setCurrentStatus(prevState => ({
             ...prevState,
@@ -164,7 +161,6 @@ const StudentProfile = ({ user, searchQuery }) => {
         setEnableEditing(!enableEditing);
         setCurrentStatus({});
         setShowEditingAlert(!showEditingAlert);
-        // Display success toast
         toast({
             title: 'Editing Mode Updated',
             position: 'top-right',
@@ -174,7 +170,7 @@ const StudentProfile = ({ user, searchQuery }) => {
             isClosable: true,
         });
     }
-    // Filter subjects based on search query
+
     const filteredSubjects = searchQuery
     ? Object.values(subjects).filter(subject => {
         const codeMatch = subject.code?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -191,11 +187,9 @@ const StudentProfile = ({ user, searchQuery }) => {
     : Object.values(subjects);
 
 
-    // Filter attendance data based on search query and other filters
     const filterAttendanceData = () => {
     let filteredData = attendanceData;
 
-    // Filter by search query
     if (searchQuery) {
         filteredData = filteredData.filter(record =>
             record.subject_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -204,14 +198,12 @@ const StudentProfile = ({ user, searchQuery }) => {
         );
     }
 
-    // Filter by attendance status
     if (attendanceFilter) {
         filteredData = filteredData.filter(record =>
             record.status.toLowerCase() === attendanceFilter.toLowerCase()
         );
     }
 
-    // Sort the data based on sortOrder
     filteredData.sort((a, b) => {
         if (sortOrder === 'asc') {
             return new Date(a.date) - new Date(b.date);
@@ -251,10 +243,9 @@ const StudentProfile = ({ user, searchQuery }) => {
     if (!studentData) {
         return <Text>No student data found</Text>;
     }
-    // Filtered and sorted attendance records based on search query and sort order
+    
     const filteredAttendanceData = filterAttendanceData();
 
-    // Group attendance records by date
     const groupedAttendance = filteredAttendanceData.reduce((acc, record) => {
         const date = new Date(record.date).toLocaleDateString();
         if (!acc[date]) {
@@ -268,7 +259,6 @@ const StudentProfile = ({ user, searchQuery }) => {
     const startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
     const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
 
-    // Calculate pagination
     const paginatedAttendanceData = Object.entries(groupedAttendance).slice(
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
@@ -432,16 +422,22 @@ const StudentProfile = ({ user, searchQuery }) => {
                                     <Tr>
                                         <Th>Subject</Th>
                                         <Th>Section</Th>
+                                        <Th>Time</Th>
                                         <Th>Attendance</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>
                                     {records.map(record => {
+                                        const malaysiaTime = format(
+                                            toZonedTime(record.date, 'Asia/Kuala_Lumpur'),
+                                            'yyyy-MM-dd HH:mm:ss'
+                                        );
                                         const stats = currentStatus[record.id] || record.status;
                                         return (
                                             <Tr key={record.subject_id}>
                                                 <Td>{record.subject_name}</Td>
                                                 <Td>{record.section.subject_section ? record.section.subject_section : 'N/A'}</Td>
+                                                <Td>{malaysiaTime}</Td>
                                                 {enableEditing ? (
                                                     <Td>
                                                         <HStack>

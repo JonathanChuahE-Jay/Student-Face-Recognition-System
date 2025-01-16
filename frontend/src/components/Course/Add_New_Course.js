@@ -199,7 +199,7 @@ const AddNewCourse = ({isDisabled, onClose, onRefresh}) => {
                         onClick={handleSubmit}
                         isLoading={isSubmitting}
                     >
-                        Save
+                        Create
                     </Button>
                 </Flex>
             </FormControl>

@@ -11,6 +11,7 @@ import {
   Center,
   useToast,
 } from '@chakra-ui/react';
+import axios from 'axios';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -65,17 +66,9 @@ const ForgotPassword = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/valid-email', {
-        method: "post",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      const response = await axios.post('http://localhost:5000/valid-email', { email });
 
-      const user = await response.json();
-
-      if (user.email) {
+      if (response.data.email) {
         await emailjs.send('service_x26hy6f', 'template_v6lg1nj', templateParams, 'E81H8nhBjCZOjEuq3');
         setEmailDisabled(true);
         setShowPin(true);
@@ -101,7 +94,7 @@ const ForgotPassword = () => {
       toast({
         title: 'Error',
         position: 'top-right',
-        description: `An error occurred: ${error.message}`,
+        description: error.response?.data?.message || "Something went wrong. Please try again.",
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -110,6 +103,7 @@ const ForgotPassword = () => {
       setIsLoading(false);
     }
   };
+  
   const handleCorrectPassword = () => {
     setIsLoading(true);
 
@@ -138,43 +132,8 @@ const ForgotPassword = () => {
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
-    if (newPassword === confirmNewPassword) {
-      setIsLoading(true);
-      try {
-        const response = await fetch('http://localhost:5000/forgot-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, newPassword }),
-        });
-
-        if (response.ok) {
-          toast({
-            title: 'Success',
-            position: 'top-right',
-            description: 'Password successfully reset.',
-            status: 'success',
-            duration: 3000,
-            isClosable: true,
-          });
-          navigate('/login');
-        } else {
-          throw new Error('Failed to reset password');
-        }
-      } catch (error) {
-        toast({
-          title: 'Error',
-          position: 'top-right',
-          description: `An error occurred: ${error.message}`,
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
+  
+    if (newPassword !== confirmNewPassword) {
       toast({
         title: 'Error',
         position: 'top-right',
@@ -183,6 +142,38 @@ const ForgotPassword = () => {
         duration: 3000,
         isClosable: true,
       });
+      return;
+    }
+  
+    setIsLoading(true);
+  
+    try {
+      const response = await axios.post('http://localhost:5000/forgot-password', {
+        email,
+        newPassword,
+      });
+  
+      toast({
+        title: 'Success',
+        position: 'top-right',
+        description: response.data.message || 'Password successfully reset.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+  
+      navigate('/login');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        position: 'top-right',
+        description: error.response?.data?.error || 'Something went wrong. Please try again.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -6,27 +6,21 @@ const handleAssignSubjectToStudent = (database) => async (req, res) => {
     }
 
     try {
-        // Fetch existing subjects for the student
         const existingSubjects = await database('student_subjects')
             .select('subject_id')
             .where({ student_id });
 
         const existingSubjectIds = new Set(existingSubjects.map(subject => subject.subject_id));
 
-        // Determine which subjects to update, insert, and delete
         const subjectsFromRequest = new Set(subjects.map(subject => subject.subject_id));
         
-        // Subjects to update
         const updates = subjects.filter(subject => existingSubjectIds.has(subject.subject_id));
         
-        // Subjects to insert
         const inserts = subjects.filter(subject => !existingSubjectIds.has(subject.subject_id));
         
-        // Subjects to delete
         const deletes = existingSubjects.filter(subject => !subjectsFromRequest.has(subject.subject_id))
                                         .map(subject => subject.subject_id);
 
-        // Update existing subjects
         for (const subject of updates) {
             await database('student_subjects')
                 .where({ student_id, subject_id: subject.subject_id })
@@ -37,7 +31,6 @@ const handleAssignSubjectToStudent = (database) => async (req, res) => {
                 });
         }
 
-        // Insert new subjects
         if (inserts.length > 0) {
             await database('student_subjects')
                 .insert(inserts.map(subject => ({
@@ -49,7 +42,6 @@ const handleAssignSubjectToStudent = (database) => async (req, res) => {
                 })));
         }
 
-        // Delete removed subjects
         if (deletes.length > 0) {
             await database('student_subjects')
                 .where({ student_id })

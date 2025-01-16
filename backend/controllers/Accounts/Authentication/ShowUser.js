@@ -57,7 +57,7 @@ const handleShowUser = (database) => async (req, res) => {
 
             if (section) {
                 const session = await database('session_logs')
-                .where('section_id', section.id) // fix this
+                .where('section_id', section.id) 
                 .andWhereRaw(`created_for >= ? AND created_for < ?`, [
                     moment(currentDate).startOf('day').toDate(),
                     moment(currentDate).endOf('day').toDate()

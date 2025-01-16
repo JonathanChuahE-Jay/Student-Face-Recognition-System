@@ -31,6 +31,7 @@ import { CheckIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import imageCompression from 'browser-image-compression';
 import axios from 'axios';
 import { FaCamera } from "react-icons/fa";
+import FaceDisplay from '../FaceRecognition/Face_Display';
 import FaceCapture from '../FaceRecognition/Face_Capture';
 
 const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
@@ -371,10 +372,16 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                     <ModalHeader>Face Capture</ModalHeader>
                     <ModalCloseButton/>
                     <ModalBody padding='20px'>
-                        <FaceCapture onClose={onCloseFaceCaptureModal} createdUser={student}/>
+                        {
+                            student.facial_path?
+                                <FaceDisplay isDisabled={isDisabled} onClose={onCloseFaceCaptureModal} createdUser={student}/>
+                            :
+                                <FaceCapture onClose={onCloseFaceCaptureModal} createdUser={student}/>
+                        }
                     </ModalBody>
                 </ModalContent>
             </Modal>
+            
             <AlertDialog
                 motionPreset='slideInBottom'
                 leastDestructiveRef={Ref}

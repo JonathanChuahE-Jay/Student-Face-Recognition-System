@@ -39,7 +39,7 @@ const { handleDeleteAssignedSubject } = require("./controllers/Accounts/Students
 const { handleAlterAssignedLecturer } = require("./controllers/Subjects/AlterAssignedLecturer");
 const { handleAlterAssignSubjectToStudent } = require("./controllers/Subjects/AlterAssignedStudents");
 const { handleUpdateAttendance } = require("./controllers/Attendance/Update_Attendance");
-const { handleDisplayDailyReport } = require("./controllers/Report/Display_Report");
+const { handleDisplayReport } = require("./controllers/Report/Display_Report");
 const { handleAdminHomeStats } = require("./controllers/Stats/AdminHomeStats");
 const { handleUpdateProfile } = require("./controllers/Accounts/Authentication/updateProfile");
 const { handleShowUser } = require("./controllers/Accounts/Authentication/ShowUser");
@@ -48,6 +48,8 @@ const { handleAutoAddAttendance } = require("./controllers/Attendance/Auto_Add_A
 const { handleDisplayClassStudents } = require("./controllers/FaceRecognition/DisplayClassStudents");
 const { handleAlterSessionLogs } = require("./controllers/Subjects/AlterSessionLogs");
 const { handleAutoSessionLogs } = require("./controllers/Subjects/AutoSessionLogs");
+const { handleSubjectRegistration } = require("./controllers/Accounts/Students/SubjectRegistration");
+const { handleNextSemester } = require("./controllers/Accounts/Authentication/NextSemester");
 
 const app = express();
 app.use(cors());
@@ -86,7 +88,7 @@ app.get('/', (req, res) => {
 app.get('/display-admin-home-stats',handleAdminHomeStats(database));
 
 // Report
-app.post('/display-daily-report', handleDisplayDailyReport(database));
+app.post('/display-daily-report', handleDisplayReport(database));
 
 // Attendances
 app.get('/auto-update-attendance',handleAutoAddAttendance(database));
@@ -102,6 +104,7 @@ app.post('/update-student', handleUpdateStudent(database));
 app.post('/assign-subject-student',handleAssignSubjectToStudent(database));
 app.post('/display-student-course-subjects',handleDisplayStudentCourse(database));
 app.post('/delete-assigned-subject',handleDeleteAssignedSubject(database));
+app.post('/subject-registration',handleSubjectRegistration(database));
 
 // Lecturers
 app.post('/register-lecturer', handleLecturerRegister(database, bcrypt));
@@ -137,6 +140,7 @@ app.post('/valid-email', handleValidEmail(database));
 app.post('/existing-email', handleExistingEmail(database));
 app.post('/update-profile',handleUpdateProfile(database, bcrypt));
 app.post('/show-user',handleShowUser(database));
+app.get('/next-semester',handleNextSemester(database));
 
 // Face recognition
 app.post('/upload', upload.single('image'),handleUpload(database));

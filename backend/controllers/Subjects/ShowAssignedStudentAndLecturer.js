@@ -23,7 +23,9 @@ const handleShowAssignedStudentAndLecturer = (database) => async (req, res) => {
             .from('student_subjects')
             .leftJoin('students', 'student_subjects.student_id', 'students.id')
             .leftJoin('users', 'students.user_id', 'users.id')
-            .where('student_subjects.subject_id', subject_id);
+            .where('student_subjects.subject_id', subject_id)
+            .andWhere('students.current_year', '=', database.ref('student_subjects.year'))
+            .andWhere('students.current_semester', '=', database.ref('student_subjects.semester'));
 
         const subject = await database
             .select('*')

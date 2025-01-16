@@ -40,44 +40,47 @@ const FaceCapture = ({ onClose, createdUser }) => {
   }, []);  
 
   const handleVideoOnPlay = () => {
-    intervalRef.current = setInterval(async () => {
-      if (webcamRef.current && webcamRef.current.video.readyState === 4) {
-        const video = webcamRef.current.video;
-        const displaySize = { width: video.videoWidth, height: video.videoHeight };
-
-        faceapi.matchDimensions(canvasRef.current, displaySize);
-
-        try {
-          const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-            .withFaceLandmarks()
-            .withFaceExpressions();
-
-          if (detections.length > 0) {
-            const resizedDetections = faceapi.resizeResults(detections, displaySize).filter(detection => {
-              const { box } = detection.detection;
-              return box && box.x !== null && box.y !== null && box.width !== null && box.height !== null;
-            });            
-            const ctx = canvasRef.current.getContext('2d');
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
-            resizedDetections.forEach(detection => {
-              if (detection && detection.detection.box) {
+    try{
+      intervalRef.current = setInterval(async () => {
+        if (webcamRef.current && webcamRef.current.video.readyState === 4) {
+          const video = webcamRef.current.video;
+          const displaySize = { width: video.videoWidth, height: video.videoHeight };
+    
+          faceapi.matchDimensions(canvasRef.current, displaySize);
+    
+          try {
+            const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+              .withFaceLandmarks()
+              .withFaceExpressions();
+    
+            if (detections.length > 0) {
+              const resizedDetections = faceapi.resizeResults(detections, displaySize).filter(detection => {
+                const { box } = detection.detection;
+                return box && [box.x, box.y, box.width, box.height].every(value => value !== null && !isNaN(value));
+              });
+    
+              const ctx = canvasRef.current.getContext('2d');
+              ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+              resizedDetections.forEach(detection => {
                 faceapi.draw.drawDetections(canvasRef.current, [detection]);
                 faceapi.draw.drawFaceLandmarks(canvasRef.current, [detection]);
                 faceapi.draw.drawFaceExpressions(canvasRef.current, [detection]);
-              } else {
-                console.warn('Invalid bounding box detected:');
-              }            
-            });
-          } else {
-            console.log('No faces detected');
+              });
+            }else {
+              console.debug('No faces detected');
+            }
+          } catch (error) {
+            console.debug('Error during face detection:', error);
           }
-        } catch (error) {
-          console.error('Error during face detection:', error);
         }
-      }
-    }, 400);
+      }, 400);
+    }catch(error){
+      console.debug('Error');
+    }
+    
   };
+  
 
   const captureImage = () => {
     if (webcamRef.current) {

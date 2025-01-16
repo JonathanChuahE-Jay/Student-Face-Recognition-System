@@ -34,14 +34,12 @@ const SubjectInfo = ({user, searchQuery}) => {
     const HEIGHT = '100vh'
     const fontColor = useColorModeValue('gray.700', 'gray.300')
 
-    // Ensure useBreakpointValue is called at the top level
     const columnCount = useBreakpointValue({ base: 1, md: 2 });
 
     if (!subject || !subject.name || !subject.code) {
         return <Text>No subject information available.</Text>;
     }    
 
-    // Function to format time
     const formatTime = (time) => {
         if (!time) return 'N/A';
 
@@ -53,7 +51,6 @@ const SubjectInfo = ({user, searchQuery}) => {
         return format(date, 'HH:mm');
     };
 
-    // Format times
     const formattedTimeAdded = format(new Date(subject.time_added), 'd MMMM, yyyy • hh:mm a');
 
     return (

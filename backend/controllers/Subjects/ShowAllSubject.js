@@ -1,35 +1,44 @@
+const moment = require('moment');
+
 const handleShowAllSubjects = (database) => async (req, res) => {
     try {
         const { lecturer_id, id_not_include, student_id } = req.query;
 
-        const role = student_id? "student" : "lecturer"; 
-        // Fetch only lecturer's subject if lecturer_id is provided
+        const role = student_id ? "student" : "lecturer"; 
+
         let subjectAssignmentsQuery = database.select('*').from(`${role}_subjects`);
+
         if (lecturer_id) {
             subjectAssignmentsQuery = subjectAssignmentsQuery.where({ lecturer_id });
         } else if (id_not_include) {
             subjectAssignmentsQuery = subjectAssignmentsQuery.whereNot({ lecturer_id: id_not_include });
-        }else if (student_id){
-            subjectAssignmentsQuery = subjectAssignmentsQuery.where({ student_id });
+        } else if (student_id) {
+            subjectAssignmentsQuery = subjectAssignmentsQuery
+                .where({ 'student_subjects.student_id': student_id }) 
+                .leftJoin('students', 'student_subjects.student_id', '=', 'students.id')
+                .where('student_subjects.year', database.ref('students.current_year'))
+                .where('student_subjects.semester', database.ref('students.current_semester'));
         }
 
-        // Execute the query to get subject
         const subjectAssignments = await subjectAssignmentsQuery;
 
-        // If `lecturer_id` is provided, get only the relevant subject IDs for the lecturer
         const subjectIds = subjectAssignments.map(assignment => assignment.subject_id);
-        
-        // Fetch only relevant subjects based on the subject IDs for the lecturer
+
         const subjectsQuery = database.select('*').from('subjects');
         if (lecturer_id || student_id) {
             subjectsQuery.whereIn('id', subjectIds);
         }
+
         const subjects = await subjectsQuery;
 
-        // Fetch all sections
+        const today = moment().format('YYYY-MM-DD'); 
+
         const sections = await database
             .select(
                 'sections.*',
+                'subjects.*',
+                'session_logs.start_time as session_start_time',
+                'session_logs.end_time as session_end_time',
                 database
                     .count('student_subjects.student_id as total_students')
                     .from('student_subjects')
@@ -46,12 +55,19 @@ const handleShowAllSubjects = (database) => async (req, res) => {
                     .andWhere('lecturer_subjects.subject_section', '=', database.ref('sections.section_number'))
                     .as('total_lecturers')
             )
-            .from('sections');
+            .from('sections')
+            .leftJoin('subjects', 'subjects.id', 'sections.subject_id')
+            .leftJoin('session_logs', function () {
+                this.on('sections.id', '=', 'session_logs.section_id')
+                    .andOn('session_logs.created_for', '=', database.raw('?', [today]));
+            });
 
-        // Organize sections by subject ID
         const sectionsBySubject = sections.reduce((acc, section) => {
-            const [startHours, startMinutes] = section.start_time.split(':').map(Number);
-            const [endHours, endMinutes] = section.end_time.split(':').map(Number);
+            const startTime = section.session_start_time || section.start_time; 
+            const endTime = section.session_end_time || section.end_time;
+
+            const [startHours, startMinutes] = startTime.split(':').map(Number);
+            const [endHours, endMinutes] = endTime.split(':').map(Number);
 
             if (!acc[section.subject_id]) {
                 acc[section.subject_id] = [];
@@ -59,6 +75,8 @@ const handleShowAllSubjects = (database) => async (req, res) => {
 
             acc[section.subject_id].push({
                 ...section,
+                start_time: startTime,
+                end_time: endTime,
                 startHours,
                 startMinutes,
                 endHours,
@@ -68,7 +86,6 @@ const handleShowAllSubjects = (database) => async (req, res) => {
             return acc;
         }, {});
 
-        // Track assigned sections by subject ID
         const assignedSectionsBySubject = subjectAssignments.reduce((acc, assignment) => {
             if (!acc[assignment.subject_id]) {
                 acc[assignment.subject_id] = new Set();
@@ -77,7 +94,6 @@ const handleShowAllSubjects = (database) => async (req, res) => {
             return acc;
         }, {});
 
-        // Attach sections and disabled status to subjects
         const subjectsWithSections = subjects.map(subject => ({
             ...subject,
             sections: (sectionsBySubject[subject.id] || []).map(section => ({
@@ -89,7 +105,7 @@ const handleShowAllSubjects = (database) => async (req, res) => {
         res.json(subjectsWithSections);
     } catch (error) {
         console.error('Error fetching data:', error);
-        res.status(500).json({ error: 'Failed to retrieve data' });
+        res.status(500).json({ error: 'Failed to retrieve data', details: error.message });
     }
 };
 

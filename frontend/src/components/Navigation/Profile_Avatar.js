@@ -31,11 +31,6 @@ const ProfileAvatar = ({ onLogout, isSignedIn, user }) => {
             <MenuItem onClick={() => navigate('/setting')}>Settings</MenuItem>
           </MenuGroup>
           <MenuDivider />
-          <MenuGroup title="Help">
-            <MenuItem>Docs</MenuItem>
-            <MenuItem>FAQ</MenuItem>
-          </MenuGroup>
-          <MenuDivider />
           <MenuGroup>
             <MenuItem onClick={handleLogout}>Log out</MenuItem>
           </MenuGroup>

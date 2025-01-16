@@ -1,5 +1,5 @@
-import React from 'react';
-import { FormLabel, Switch } from '@chakra-ui/react';
+import React from "react";
+import { FormLabel, Switch } from "@chakra-ui/react";
 
 const Color_Mode = ({ isDarkMode, setIsDarkMode }) => {
   return (
@@ -11,6 +11,6 @@ const Color_Mode = ({ isDarkMode, setIsDarkMode }) => {
       />
     </>
   );
-}
+};
 
 export default Color_Mode;

@@ -90,16 +90,13 @@ const Show_Attendance = ({searchQuery, user}) => {
         });
     };
 
-    // Fetch attendance data from the server
     const fetchAttendanceData = async () => {
         try {
             const response = await axios.post(`/show-attendances`, { subject_id, selectedSection, calendarDate });
             const data = response.data;
     
-            // Sort sectionTime by section_id if not already sorted by the database
             const orderedSectionTime = data.sectionTime.sort((a, b) => a.section_number - b.section_number);
     
-            // Group lecturer data by section
             const lecturersBySection = {};
             data.lecturers.forEach(record => {
                 if (!lecturersBySection[record.subject_section]) {
@@ -142,37 +139,28 @@ const Show_Attendance = ({searchQuery, user}) => {
         fetchAttendanceData();
     }, [subject_id, calendarDate, selectedSection]);
     
-
-    // Set start section
     useEffect(() => {
         if (!sectionTime || sectionTime.length === 0) return;
         const currentTime = new Date();
     
-
         const updatedStartClass = sectionTime.map((section) => {
             const startTime = new Date();
             const endTime = new Date();
     
-            const today = new Date();
-            const malaysiaTimeOffset = 8 * 60 * 60 * 1000;
-            const malaysiaDate = new Date(today.getTime() + malaysiaTimeOffset);
-            const currentDay = malaysiaDate.toLocaleString('en-US', { weekday: 'long' });
-
             const [startHours, startMinutes] = section.start_time ? section.start_time.split(':') : ["0", "0"];
             const [endHours, endMinutes] = section.end_time ? section.end_time.split(':') : ["23", "59"];
-            const sectionDay = section.day?? section.day; 
     
             startTime.setHours(parseInt(startHours), parseInt(startMinutes), 0);
             endTime.setHours(parseInt(endHours), parseInt(endMinutes), 0);
     
-            return currentTime >= startTime && currentTime <= endTime && sectionDay == currentDay;
+            return currentTime >= startTime && currentTime <= endTime;
         });
     
         setStartClass(updatedStartClass);
     }, [sectionTime, numberOfSections]);
+   
     const actualSectionIndex = selectedSection && selectedSection !== 'All' ? parseInt(selectedSection) - 1 : null;
 
-    // Handle adding attendance records
     const handleAddAttendance = async () => {
         const selectedDate = new Date(calendarDate);
         const attendanceRecords = Object.entries(studentStatus).map(([studentId, status]) => ({
@@ -215,17 +203,14 @@ const Show_Attendance = ({searchQuery, user}) => {
     };
 
     useEffect(() => {
-         // Filter attendance data by selected date and section
         const filtered = attendanceData.filter(
             (record) => new Date(record.date).toDateString() === calendarDate.toDateString()
         );
     
-        // Apply section filtering if a specific section is selected
         const filteredBySection = selectedSection === 'All'
             ? filtered
             : filtered.filter((record) => record.subject_section === parseInt(selectedSection, 10));
     
-        // Set the filtered data to state
         setFilteredData(filteredBySection);
     }, [calendarDate, attendanceData, selectedSection]);
     
@@ -287,7 +272,6 @@ const Show_Attendance = ({searchQuery, user}) => {
     };
     
     useEffect(() => {
-        // Filter students based on selected section
         const filteredStudents = selectedSection
             ? student.filter(record => record.subject_section === Number(selectedSection))
             : student;
@@ -295,7 +279,6 @@ const Show_Attendance = ({searchQuery, user}) => {
     }, [selectedSection, student]);
     
     useEffect(() => {
-        // Set pie chart loading state based on filtered data
         if (filteredData.length === 0) {
           setPieChartLoading(true);
         } else {
@@ -306,13 +289,11 @@ const Show_Attendance = ({searchQuery, user}) => {
     useEffect(() => {
         const searchLowerCase = searchQuery.toLowerCase();
     
-        // Apply search to filteredData
         let searchData = filteredData.filter(record => {
             const studentName = (record.student_name || '').toString().toLowerCase();
             return studentName.includes(searchLowerCase);
         });
     
-        // Apply attendance status filter based on checked checkboxes
         if (Object.values(attendanceStatuses).some(status => status)) {
             searchData = searchData.filter((data) => {
                 const status = (data.status || '').toLowerCase();
@@ -390,8 +371,6 @@ const Show_Attendance = ({searchQuery, user}) => {
 
                             }
                             
-                            
-                            
                             <Flex alignItems='center'>
                                 <Text fontSize="sm" mr={3}>
                                     Status: 
@@ -427,14 +406,12 @@ const Show_Attendance = ({searchQuery, user}) => {
             );
     }
     
-    // Handle Start Class
     const handleClass = async (section, time) => {
         try {
             if (!subject_id || !user) {
                 console.error("Missing subject_id or user");
                 throw new Error("Missing subject_id or user information");
             }
-    
             const response = await axios.post('/alter-session-logs', {
                 subject_id,
                 section,
@@ -463,17 +440,16 @@ const Show_Attendance = ({searchQuery, user}) => {
                 duration: 1000,
                 isClosable: true,
             });
+        }finally{ 
+            fetchAttendanceData();
         }
-        fetchAttendanceData();
-    };
+    };   
 
-    // Handle editing
     const handleEditing = (status) => {
         setEnableEditing(!enableEditing);
         setShowEditingAlert(!showEditingAlert);
         setStudentStatus({});
         
-        // Display success toast
         toast({
             title: 'Editing Mode Updated',
             position: 'top-right',

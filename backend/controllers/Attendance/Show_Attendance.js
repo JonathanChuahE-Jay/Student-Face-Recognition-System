@@ -1,5 +1,15 @@
+const moment = require('moment-timezone'); 
+
 const handleShowAttendance = (database) => async (req, res) => {
     const { student_id, subject_id, selectedSection, calendarDate } = req.body;
+
+    if (!req.body) {
+        return res.status(400).json({ error: 'Request body is missing' });
+    }
+
+    if (!student_id && !subject_id) {
+        return res.status(400).json({ error: 'Either student_id or subject_id must be provided' });
+    }
 
     try {
         if (student_id && !subject_id) {
@@ -11,20 +21,20 @@ const handleShowAttendance = (database) => async (req, res) => {
                 return res.status(404).json({ error: 'No attendance records found for this student' });
             }
 
-            // Extract unique subject IDs
             const subjectIds = [...new Set(studentAttendance.map(record => record.subject_id))];
 
-            // Fetch sections and subjects
             const studentSubjects = await database('student_subjects')
-                .select('*')
-                .where({ student_id });
+                .leftJoin('students', 'students.id', 'student_subjects.student_id')
+                .where('students.current_year', '=', database.raw('CAST(student_subjects.year AS INTEGER)'))
+                .andWhere('students.current_semester', '=', database.raw('CAST(student_subjects.semester AS INTEGER)'))
+                .andWhere('student_subjects.student_id', student_id)
+                .select('*');
 
-            // Fetch subject details
+
             const subjects = await database('subjects')
                 .whereIn('id', subjectIds)
                 .select('id', 'name');
 
-            // Map subjects for easier lookup
             const subjectMap = subjects.reduce((map, subject) => {
                 map[subject.id] = subject.name;
                 return map;
@@ -35,7 +45,6 @@ const handleShowAttendance = (database) => async (req, res) => {
                 return map;
             }, {});
 
-            // Attach subject names and sections
             const attendanceWithDetails = studentAttendance.map(record => ({
                 ...record,
                 subject_name: subjectMap[record.subject_id] || 'Unknown Subject',
@@ -47,7 +56,6 @@ const handleShowAttendance = (database) => async (req, res) => {
                 studentAttendance: attendanceWithDetails
             });
         } else if (subject_id && selectedSection && calendarDate) {
-            // Fetch student-related subjects
             const studentSubjects = await database('student_subjects')
                 .leftJoin('students', 'student_subjects.student_id', 'students.id')
                 .leftJoin('users', 'students.user_id', 'users.id')
@@ -69,7 +77,6 @@ const handleShowAttendance = (database) => async (req, res) => {
                     'student_subjects.subject_section'
                 );
 
-            // Fetch lecturer-related subjects
             const lecturerSubjects = await database('lecturer_subjects')
                 .leftJoin('lecturers', 'lecturer_subjects.lecturer_id', 'lecturers.id')
                 .leftJoin('users', 'lecturers.user_id', 'users.id')
@@ -82,7 +89,6 @@ const handleShowAttendance = (database) => async (req, res) => {
                     'lecturer_subjects.subject_section'
                 );
 
-            // Fetch attendance records
             const attendances = await database('attendances')
                 .where('attendances.subject_id', subject_id)
                 .select(
@@ -90,32 +96,37 @@ const handleShowAttendance = (database) => async (req, res) => {
                     'attendances.student_id as attendance_student_id'
                 );
 
-            // Fetch all sections for the subject
             const sectionTime = await database('sections')
                 .where('subject_id', subject_id)
                 .select('*');
         
             const date = new Date(calendarDate);
-            const formattedDate = date.toISOString().split('T')[0];
-            
-            // Fetch session logs for each section
+
+            const formattedDate = moment(date).tz('Asia/Kuala_Lumpur').format('YYYY-MM-DD'); 
+
             await Promise.all(
                 sectionTime.map(async (section) => {
                     const log = await database('session_logs')
                         .where({ created_for: formattedDate, section_id: section.id })
                         .select('start_time', 'end_time')
                         .first();
-
-                    section.start_time = log ? (log.start_time || '00:00:00') : section.start_time || '00:00:00';
-                    section.end_time = log ? (log.end_time || '23:59:59') : 
-                                        section.end_time >= section.start_time ? section.end_time : '23:59:59';
+            
+                    if (log) {
+                        section.start_time = log.start_time || '00:00:00';
+                        section.end_time = log.end_time || '23:59:59';
+                    } else {
+                        section.start_time = section.start_time || '00:00:00';
+                        section.end_time = section.end_time || '23:59:59';
+                    }
+            
+                    if (section.end_time < section.start_time) {
+                        section.end_time = '23:59:59';
+                    }
                 })
             );
-
-            // Extract unique dates from attendance records
+            
             const attendanceDates = [...new Set(attendances.map(att => new Date(att.date).toDateString()))];
 
-            // Prepare result for students
             const studentResult = studentSubjects.map(record => {
                 const recordsForStudent = attendanceDates.map(date => {
                     const attendanceRecord = attendances.find(att =>
@@ -133,14 +144,12 @@ const handleShowAttendance = (database) => async (req, res) => {
                 return recordsForStudent;
             }).flat();
 
-            // Prepare result for lecturers
             const lecturerResult = lecturerSubjects.map(record => ({
                 ...record,
                 status: 'N/A',
                 date: null
             }));
 
-            // Return both results
             res.json({
                 sectionTime,
                 showAll: studentSubjects,

@@ -3,51 +3,95 @@ import {
   Box,
   Text,
   Heading,
-  Stack,
-  Flex,
-  useColorModeValue,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
   Badge,
   Icon,
-  VStack,
-  Grid,
-  GridItem,
+  Button,
+  Flex,
+  IconButton,
+  Tooltip,
+  useColorModeValue,
 } from "@chakra-ui/react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import axios from "axios";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { FaCheckCircle, FaTimesCircle, FaClock, FaHourglassStart, FaStopCircle } from "react-icons/fa";
+import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 const StudentHome = ({ searchQuery, user }) => {
   const [recentAttendances, setRecentAttendances] = useState([]);
-  const [upcomingClasses, setUpcomingClasses] = useState(user.subjectsData);
-  const [filteredClasses, setFilteredClasses] = useState(upcomingClasses);
-  const [filteredAttendances, setFilteredAttendances] = useState(recentAttendances);
+  const [upcomingClasses, setUpcomingClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
+  const [filteredAttendances, setFilteredAttendances] = useState([]);
+
+  const [attendancePage, setAttendancePage] = useState(1);
+  const [classesPage, setClassesPage] = useState(1);
+  const recordsPerPage = 5;
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const response = await axios.post("/show-attendances", { student_id: user?.id });
-        setRecentAttendances(response.data.studentAttendance || []);
-        setFilteredAttendances(response.data.studentAttendance || []);
-      } catch (error) {
-        console.error("Error fetching attendance:", error);
-      }
+        try {
+            const response = await axios.post("/show-attendances", { student_id: user?.id });
+            const attendances = response.data.studentAttendance || [];
+            const sortedAttendances = attendances.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            setRecentAttendances(sortedAttendances);
+            setFilteredAttendances(sortedAttendances);
+        } catch (error) {
+            console.error("Error fetching attendance:", error);
+        }
     };
 
     fetchData();
+}, [user]);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = await axios.get("/show-all-subjects", {
+          params: { student_id: user?.id },
+        });
+
+        const subjectsData = response.data;
+        const userSubjects = user?.subjectsData || [];
+
+        const flattenedSections = userSubjects.flatMap((userSubject) => {
+          const matchingSubject = subjectsData.find(
+            (subject) => subject.id === userSubject.subject_id
+          );
+
+          return matchingSubject?.sections.filter(
+            (section) => section.section_number === userSubject.subject_section
+          ) || [];
+        });
+
+        setUpcomingClasses(flattenedSections);
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+      }
+    };
+
+    if (user) {
+      fetchSubjects();
+    }
   }, [user]);
 
   useEffect(() => {
     const lowerCaseQuery = searchQuery?.toLowerCase() || "";
 
     const filtered = upcomingClasses.filter((classItem) =>
-      classItem.subject_name.toLowerCase().includes(lowerCaseQuery)
+      classItem.name?.toLowerCase().includes(lowerCaseQuery)
     );
     setFilteredClasses(filtered);
 
     const filteredAttendance = recentAttendances.filter((attendance) =>
-      attendance.subject_name.toLowerCase().includes(lowerCaseQuery) ||
-      attendance.status.toLowerCase().includes(lowerCaseQuery),
+      attendance.subject_name?.toLowerCase().includes(lowerCaseQuery) ||
+      attendance.status?.toLowerCase().includes(lowerCaseQuery)
     );
     setFilteredAttendances(filteredAttendance);
   }, [searchQuery, upcomingClasses, recentAttendances]);
@@ -58,26 +102,73 @@ const StudentHome = ({ searchQuery, user }) => {
     return format(zonedDate, "yyyy-MM-dd hh:mm:ss a");
   };
 
-  const getClassStatus = (startTime, endTime) => {
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-
-    const [startHour, startMinute] = startTime.split(":").map(Number);
-    const [endHour, endMinute] = endTime.split(":").map(Number);
-    const startClassTime = startHour * 60 + startMinute;
-    const endClassTime = endHour * 60 + endMinute;
-
-    if (currentTime < startClassTime) {
-      return "starting_in";
-    } else if (currentTime >= startClassTime && currentTime <= endClassTime) {
-      return "ongoing";
-    } else {
-      return "ended";
-    }
-  };
-
   const cardBg = useColorModeValue("white", "gray.800");
 
+  const paginate = (data, currentPage) => {
+    const start = (currentPage - 1) * recordsPerPage;
+    const end = start + recordsPerPage;
+    return data.slice(start, end);
+  };
+
+  const renderPagination = (currentPage, totalPages, setPage) => {
+    const maxPageButtons = 5;
+    const startPage = Math.max(currentPage - Math.floor(maxPageButtons / 2), 1);
+    const endPage = Math.min(startPage + maxPageButtons - 1, totalPages);
+
+    return (
+      <Flex direction="row" align="center" mt={4} justify="center">
+        <Tooltip label="Previous Page" fontSize="md">
+          <IconButton
+            icon={<ChevronLeftIcon />}
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            isDisabled={currentPage === 1}
+            mr={2}
+          />
+        </Tooltip>
+
+        {startPage > 1 && (
+          <>
+            <Button mx={1} onClick={() => setPage(1)} colorScheme="gray">
+              1
+            </Button>
+            {startPage > 2 && <Text mx={1}>...</Text>}
+          </>
+        )}
+
+        {Array.from(
+          { length: endPage - startPage + 1 },
+          (_, i) => startPage + i
+        ).map((page) => (
+          <Button
+            key={page}
+            mx={1}
+            onClick={() => setPage(page)}
+            colorScheme={page === currentPage ? "blue" : "gray"}
+          >
+            {page}
+          </Button>
+        ))}
+
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <Text mx={1}>...</Text>}
+            <Button mx={1} onClick={() => setPage(totalPages)} colorScheme="gray">
+              {totalPages}
+            </Button>
+          </>
+        )}
+
+        <Tooltip label="Next Page" fontSize="md">
+          <IconButton
+            icon={<ChevronRightIcon />}
+            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+            isDisabled={currentPage === totalPages}
+            ml={2}
+          />
+        </Tooltip>
+      </Flex>
+    );
+  };
   return (
     <Box p={5}>
       <Heading mb={5} color="teal.500">
@@ -85,98 +176,100 @@ const StudentHome = ({ searchQuery, user }) => {
       </Heading>
 
       {/* Attendance Section */}
-      <Grid templateColumns="repeat(4, 1fr)" gap={6}>
-        <GridItem colSpan={4}>
-          <Box bg={cardBg} p={5} rounded="lg" shadow="md">
-            <Heading size="md" mb={3} color="blue.600">
-              Recent Attendance
-            </Heading>
-
-            <Stack spacing={4}>
-              {filteredAttendances.length > 0 ? (
-                filteredAttendances.map((attendance, index) => (
-                  <Flex key={index} justify="space-between" p={4} rounded="md" bg="gray.100">
-                    <VStack align="start" spacing={1}>
-                      <Text fontWeight="bold">{attendance.subject_name || "Unknown"}</Text>
-                      <Text fontSize="sm" color="gray.500">{convertToMYRTime(attendance.date)}</Text>
-                    </VStack>
-                    <Flex direction="column" align="center">
-                      <Badge
-                        colorScheme={attendance.status === "Present" ? "green" : "red"}
-                        mb={2}
-                      >
-                        {attendance.status}
-                      </Badge>
+      <Box bg={cardBg} p={5} rounded="lg" shadow="md" mb={6}>
+        <Heading size="md" mb={3} color="blue.600">
+          Recent Attendance
+        </Heading>
+        <Table variant="simple" size="md">
+          <Thead>
+            <Tr>
+              <Th>Subject</Th>
+              <Th>Date</Th>
+              <Th>Status</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {
+              filteredAttendances.length > 0 ?
+              paginate(filteredAttendances, attendancePage).map((attendance, index) => (
+                <Tr key={index}>
+                  <Td>{attendance.subject_name || "Unknown"}</Td>
+                  <Td>{convertToMYRTime(attendance.date)}</Td>
+                  <Td>
+                    <Badge
+                      colorScheme={attendance.status === "Present" ? "green" : "red"}
+                      display="inline-flex"
+                      alignItems="center"
+                    >
                       <Icon
                         as={attendance.status === "Present" ? FaCheckCircle : FaTimesCircle}
-                        boxSize={6}
-                        color={attendance.status === "Present" ? "green.500" : "red.500"}
+                        mr={1}
                       />
-                    </Flex>
-                  </Flex>
-                ))
-              ) : (
-                <Text>No recent attendance records found.</Text>
-              )}
-            </Stack>
-          </Box>
-        </GridItem>
-      </Grid>
+                      {attendance.status}
+                    </Badge>
+                  </Td>
+                </Tr>
+              ))
+              :
+              <Tr>
+                <Td colSpan="3" textAlign='center'>
+                  No attendance available
+                </Td>
+              </Tr>
+            }
+          </Tbody>
+        </Table>
+        {renderPagination(
+          attendancePage,
+          Math.ceil(filteredAttendances.length / recordsPerPage),
+          setAttendancePage
+        )}
+      </Box>
 
       {/* Upcoming Classes Section */}
-      <Grid templateColumns="repeat(4, 1fr)" gap={6}>
-        <GridItem colSpan={4}>
-          <Box bg={cardBg} p={5} rounded="lg" shadow="md">
-            <Heading size="md" mb={3} color="blue.600">
-              Upcoming Subjects
-            </Heading>
-
-            <Stack spacing={4}>
-              {filteredClasses.length > 0 ? (
-                filteredClasses.map((classes, index) => {
-                  const classStatus = getClassStatus(classes.start_time, classes.end_time);
-                  let bgColor;
-                  let statusText;
-                  let icon;
-
-                  if (classStatus === "starting_in") {
-                    bgColor = "green.50";
-                    statusText = `Starting at ${classes.start_time}`;
-                    icon = <Icon as={FaHourglassStart} boxSize={6} color="green.500" />;
-                  } else if (classStatus === "ongoing") {
-                    bgColor = "blue.50";
-                    statusText = "Ongoing";
-                    icon = <Icon as={FaClock} boxSize={6} color="blue.500" />;
-                  } else {
-                    bgColor = "red.50";
-                    statusText = "Ended";
-                    icon = <Icon as={FaStopCircle} boxSize={6} color="red.500" />;
-                  }
-
-                  return (
-                    <Flex key={index} justify="space-between" p={4} rounded="md" bg={bgColor} boxShadow="sm">
-                      <VStack align="start" spacing={1}>
-                        <Text fontWeight="bold">{classes.subject_name || "Unknown"}</Text>
-                        <Text fontSize="sm" color="gray.500">{classes.day}</Text>
-                      </VStack>
-                      <Flex direction="column" align="center">
-                        <Text fontWeight="bold" fontSize="lg">{`${classes.start_time} - ${classes.end_time}`}</Text>
-                        <Text fontSize="sm" color="gray.600">{classes.venue}</Text>
-                      </Flex>
-                      <Flex direction="column" align="center" justify="center">
-                        {icon}
-                        <Text fontSize="sm" color="blue.600">{statusText}</Text>
-                      </Flex>
-                    </Flex>
-                  );
-                })
-              ) : (
-                <Text>No upcoming classes found.</Text>
-              )}
-            </Stack>
-          </Box>
-        </GridItem>
-      </Grid>
+      <Box bg={cardBg} p={5} rounded="lg" shadow="md">
+        <Heading size="md" mb={3} color="blue.600">
+          Upcoming Subjects
+        </Heading>
+        <Table variant="simple" size="md">
+          <Thead>
+            <Tr>
+              <Th>Subject</Th>
+              <Th>Day</Th>
+              <Th>Section</Th>
+              <Th>Time</Th>
+              <Th>Venue</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {
+              filteredClasses.length > 0 ?
+              paginate(filteredClasses, classesPage).map((classes, index) => (
+                <Tr key={index}>
+                  <Td>{classes.name || "Unknown"}</Td>
+                  <Td>{classes.day || "Unknown"}</Td>
+                  <Td>Section: {classes.section_number}</Td>
+                  <Td>
+                    {classes.start_time || "00:00:00"} - {classes.end_time || "00:00:00"}
+                  </Td>
+                  <Td>{classes.venue || "Unknown"}</Td>
+                </Tr>
+              ))
+              :
+              <Tr>
+                <Td colSpan="4" textAlign='center'>
+                  No Subjects available
+                </Td>
+              </Tr>
+            }
+          </Tbody>
+        </Table>
+        {renderPagination(
+          classesPage,
+          Math.ceil(filteredClasses.length / recordsPerPage),
+          setClassesPage
+        )}
+      </Box>
     </Box>
   );
 };

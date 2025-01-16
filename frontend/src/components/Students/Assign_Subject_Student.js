@@ -49,8 +49,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
 
     const {isOpen: isOpenIncreaseCapacity, onOpen: onOpenIncreaseCapacity, onClose: onCloseIncreaseCapacity} = useDisclosure();
 
-    console.log(data)
-    // Fetch all subjects on component mount
     useEffect(() => {
         axios.get('http://localhost:5000/show-all-subjects')
             .then(res => {
@@ -72,7 +70,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
             });
     },[]);
     
-    // Fetch assigned subjects
     useEffect(() => {
         const fetchSubjects = async () => {
             setLoading(true);
@@ -81,7 +78,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
                 const { subjectData } = response.data;
                 
                 if (Array.isArray(subjectData)) {
-                    // Extract assigned subject IDs and their sections
                     const assignedSubjectIds = subjectData.map(subject => subject.subject_id);
                     const assignedSections = subjectData.reduce((acc, subject) => {
                         acc[subject.subject_id] = subject.subject_section;
@@ -89,7 +85,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
                     }, {});
                     setSelectedSubjects(assignedSubjectIds);
                     setSubjectSections(assignedSections);
-                    // Extract years and semesters for each subject
                     const allYears = subjectData.map(subject => parseInt(subject.year, 10));
                     const allSemesters = subjectData.map(subject => parseInt(subject.semester, 10));
 
@@ -125,14 +120,12 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         }
     }, [studentId]);
 
-    // Toggle subject selection
     const handleSelectSubject = (id) => {
         setSelectedSubjects(prevSelectedSubjects => {
             const newSelection = prevSelectedSubjects.includes(id)
                 ? prevSelectedSubjects.filter(subjectId => subjectId !== id)
                 : [...prevSelectedSubjects, id];
     
-            // Remove related entries for the deselected subject
             const newSubjectSections = { ...subjectSections };
             const newAssignedYear = [...assignedYear];
             const newAssignedSemester = [...assignedSemester];
@@ -153,7 +146,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         });
     };
 
-    // Handle section change for a selected subject
     const handleSectionChange = (subjectId, section) => {
         setSubjectSections(prevSections => ({
             ...prevSections,
@@ -161,7 +153,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         }));
     };
 
-    // Handle form submission
     const handleSubmit = () => {
 
         const subjects = selectedSubjects.map((subject_id, index) => {
@@ -185,7 +176,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         const filteredSectionValidation = subjects.filter(subject =>
             subject.year === year && subject.semester ===semester
         )
-        // Check if all required sections are selected
         const allCurrentSectionSelected = filteredSectionValidation.every(subject => {
             const isValidSection = !isNaN(subject.subject_section) && subject.subject_section > 0;
             return isValidSection;
@@ -245,19 +235,16 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         });
     }        
 
-    // Filter subjects based on search query
     const filteredData = data.filter(subject =>
         subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         subject.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (subject.section && subject.section.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    // Reset page number when search query changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery]);
 
-    // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
@@ -272,7 +259,6 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         startPage = Math.max(endPage - maxPagesToShow + 1, 1);
     }
 
-    // Handle page change
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };

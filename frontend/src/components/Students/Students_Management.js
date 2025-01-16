@@ -70,18 +70,15 @@ const StudentManagement = ({user, searchQuery}) => {
 
     const studentsPerPage = 10; 
 
-    // Modal controls
     const { isOpen: isOpenAddNewStudentModal, onOpen: onOpenAddNewStudentModal, onClose: onCloseAddNewStudentModal } = useDisclosure();
     const { isOpen: isOpenUpdateStudentModal, onOpen: onOpenUpdateStudentModal, onClose: onCloseUpdateStudentModal } = useDisclosure();
     const { isOpen: isOpenDeleteStudentModal, onOpen: onOpenDeleteStudentModal, onClose: onCloseDeleteStudentModal } = useDisclosure();
     const { isOpen: isOpenViewCourseDrawer, onOpen: onOpenViewCourseDrawer, onClose: onCloseViewCourseDrawer } = useDisclosure();  
 
-    // Format date for display
     const formattedDate = (timestamp) => new Date(timestamp).toLocaleString('en-GB', {
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
 
-    // Fetch subjects for each student
     const fetchSubjectsForStudent = useCallback(async (student_id) => {
         try {
             const res = await axios.post('http://localhost:5000/display-assigned-subjects', { student_id });
@@ -110,8 +107,6 @@ const StudentManagement = ({user, searchQuery}) => {
         }
     }, []);
 
-
-    // Fetch student data
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -135,7 +130,6 @@ const StudentManagement = ({user, searchQuery}) => {
         }
     }, [fetchSubjectsForStudent, toast]);
     
-    // Delete student
     const handleDeleteStudent = useCallback(async () => {
         try {
             const response = await axios.delete('http://localhost:5000/delete-student', {
@@ -229,7 +223,6 @@ const StudentManagement = ({user, searchQuery}) => {
         }
     }, [searchQuery]);
 
-    // Pagination logic
     const paginatedData = filteredData.slice(
         (currentPage - 1) * studentsPerPage,
         currentPage * studentsPerPage
@@ -237,7 +230,6 @@ const StudentManagement = ({user, searchQuery}) => {
 
     const totalPages = Math.ceil(filteredData.length / studentsPerPage);
 
-    // Determine page range to display
     const maxPageButtons = 6;
     let startPage, endPage;
 
@@ -258,7 +250,6 @@ const StudentManagement = ({user, searchQuery}) => {
         }
     }
 
-    // Handle student update
     const handleUpdate = useCallback((student) => {
         if (student) {
             setStudent(student);
@@ -278,7 +269,6 @@ const StudentManagement = ({user, searchQuery}) => {
         onOpenDeleteStudentModal();
     }, [onOpenDeleteStudentModal]);
 
-    // CheckBox related
     const [checkedItems, setCheckedItems] = useState({});
     const allChecked = paginatedData.every((student) => checkedItems[student.id]);
     const isIndeterminate = paginatedData.some((student) => checkedItems[student.id]) && !allChecked;
@@ -619,7 +609,7 @@ const StudentManagement = ({user, searchQuery}) => {
             </Flex>
             
             {/* Modals */}
-            <Modal scrollBehavior="inside" isOpen={isOpenAddNewStudentModal} onClose={onCloseAddNewStudentModal}>
+            <Modal scrollBehavior="inside" isOpen={isOpenAddNewStudentModal} onClose={onCloseAddNewStudentModal} size="3xl">
                 <ModalOverlay />
                 <ModalContent marginTop='3px'  maxHeight="100vh">
                     <ModalHeader>Add New Student</ModalHeader>

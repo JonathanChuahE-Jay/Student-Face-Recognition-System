@@ -1,6 +1,6 @@
 const moment = require('moment-timezone');
 
-const handleDisplayDailyReport = (database) => async (req, res) => {
+const handleDisplayReport = (database) => async (req, res) => {
     const { date, subjectsAndSections } = req.body;
 
     try {
@@ -151,12 +151,54 @@ const handleDisplayDailyReport = (database) => async (req, res) => {
                 subjectsWithSectionsAndLecturers,
             });
         }
+        const startOfWeek = moment(date).tz('Asia/Kuala_Lumpur').startOf('week').format('YYYY-MM-DD');
+        const endOfWeek = moment(date).tz('Asia/Kuala_Lumpur').endOf('week').format('YYYY-MM-DD');
 
-        res.json({ result, subjectsWithSectionsAndLecturers });
+        const weeklyData = await database('attendances')
+            .select(
+                'attendances.subject_id',
+                'student_subjects.subject_section as section_number',
+                'attendances.status',
+                'subjects.name as subject_name',
+                database.raw('COUNT(attendances.id) as total_count')
+            )
+            .leftJoin('student_subjects', function () {
+                this.on('student_subjects.student_id', '=', 'attendances.student_id')
+                    .andOn('student_subjects.subject_id', '=', 'attendances.subject_id');
+            })
+            .leftJoin('subjects', 'subjects.id', 'student_subjects.subject_id')
+            .whereBetween('attendances.date', [startOfWeek, endOfWeek])
+            .groupBy('attendances.subject_id', 'student_subjects.subject_section', 'attendances.status', 'subjects.name')
+            .then(rows => {
+                const data = {};
+                rows.forEach(row => {
+                    const key = `${row.subject_id}-${row.section_number}`;
+                    if (!data[key]) {
+                        data[key] = {
+                            subject_name: row.subject_name, 
+                            subject_id: row.subject_id,
+                            section_number: row.section_number,
+                            Present: 0,
+                            Absent: 0,
+                            Excused: 0,
+                        };
+                    }
+                    data[key][row.status] = parseInt(row.total_count, 10);
+                });
+                return Object.values(data);
+            });
+    
+        res.json({
+            result,
+            subjectsWithSectionsAndLecturers,
+            weeklyReport: weeklyData,
+            weekRange: { startOfWeek, endOfWeek },
+        });
+
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
-module.exports = { handleDisplayDailyReport };
+module.exports = { handleDisplayReport };

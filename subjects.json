@@ -1,0 +1,15 @@
+[
+  {
+    "subjectName": "Software Principle",
+    "subjectCode": "SP0192",
+    "subjectSection": "MPU Compulsory",
+    "numberOfSections": 4,
+    "sectionTimes": [
+      { "startTime": "10:00", "endTime": "12:00", "day": "Tuesday", "venue": "Room 201", "maxStudents": 25 },
+      { "startTime": "13:00", "endTime": "15:00", "day": "Thursday", "venue": "Room 202", "maxStudents": 25 },
+      { "startTime": "09:00", "endTime": "11:00", "day": "Friday", "venue": "Room 203", "maxStudents": 25 },
+      { "startTime": "14:00", "endTime": "16:00", "day": "Friday", "venue": "Room 204", "maxStudents": 25 }
+    ]
+  }
+]
+

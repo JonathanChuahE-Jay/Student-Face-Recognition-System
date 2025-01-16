@@ -4,7 +4,7 @@ import { CalendarIcon, DeleteIcon, EditIcon, InfoIcon, InfoOutlineIcon, MinusIco
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const SubjectList = ({searchQuery, user, fetchData, paginatedData, isDisabled, filteredData, handleUpdateSubject, handleDeleteConfirmation, handleMoreInfo }) => {
+const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData, handleUpdateSubject, handleDeleteConfirmation, handleMoreInfo }) => {
     const navigate = useNavigate();
     const toast = useToast();
     const [deleteCheckBoxBar, setDeleteCheckBoxBar] = useState(false);
@@ -120,7 +120,6 @@ const SubjectList = ({searchQuery, user, fetchData, paginatedData, isDisabled, f
             });
         }
     }, [checkedItems, fetchData, toast]);
-    console.log(user)
     return (
         <Box minHeight="350px" mt={5}>
             {filteredData.length === 0 ? (

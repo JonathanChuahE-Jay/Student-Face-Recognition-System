@@ -1,13 +1,14 @@
+const moment = require('moment-timezone'); 
+
 const handleAutoAddAttendance = (database) => async (req, res) => {
-    const today = new Date();
-    const malaysiaTimeOffset = 8 * 60 * 60 * 1000;
+    const malaysiaDate = moment().tz('Asia/Kuala_Lumpur');
+    const formattedDate = malaysiaDate.format('YYYY-MM-DD');  
+    const formattedTime = malaysiaDate.format('HH:mm:ss');  
 
-    const malaysiaDate = new Date(today.getTime() + malaysiaTimeOffset);
-    const formattedDate = malaysiaDate.toISOString().split('T')[0];
-    const formattedTime = malaysiaDate.toISOString().split('T')[1].slice(0, 8);
+    const currentDay = malaysiaDate.format('dddd');
 
-    const currentDay = malaysiaDate.toLocaleString('en-US', { weekday: 'long' });
-
+    const today = moment().tz('Asia/Kuala_Lumpur').toDate(); 
+    
     try {
         const sessionLog = await database('session_logs')
             .where({ created_for: formattedDate })

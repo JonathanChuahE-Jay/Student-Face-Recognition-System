@@ -3,26 +3,20 @@ const handleAddNewSubject = (database) => async (req, res) => {
     let { subjectPicture } = req.body;
 
     try {
-        // Check if subjectName and subjectCode are provided
         if (!subjectName || !subjectCode) {
             return res.status(400).json({ error: "Subject name and subject code are required" });
         }
         
-        // Use default picture if subjectPicture is not provided
         if (!subjectPicture) {
             subjectPicture = 'https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg';
         }
 
-        // Normalize subjectCode: uppercase and remove spaces
         const upperCaseSubjectCode = subjectCode.toUpperCase().replace(/\s+/g, '');
 
-        // Check if the subject code already exists
         const subjectExists = await database('subjects').where({ code: upperCaseSubjectCode }).first();
         if (subjectExists) {
             return res.status(400).json({ error: 'Subject Code already exists' });
         }
-
-        // Insert the new subject
         const [newSubject] = await database('subjects')
             .insert({
                 name: subjectName,
@@ -34,7 +28,6 @@ const handleAddNewSubject = (database) => async (req, res) => {
             })
             .returning('*');
 
-        // Process section times
         if (sectionTimes && sectionTimes.length > 0) {
             const sectionEntries = sectionTimes.map((time, index) => ({
                 subject_id: newSubject.id,
@@ -48,7 +41,6 @@ const handleAddNewSubject = (database) => async (req, res) => {
 
             await database('sections').insert(sectionEntries);
         } else {
-            // Handle case where sectionTimes is empty
             const defaultSectionEntries = Array.from({ length: numberOfSections }, (_, index) => ({
                 subject_id: newSubject.id,
                 section_number: index + 1,

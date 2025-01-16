@@ -27,10 +27,11 @@ const FaceRecognition = ({searchQuery, user}) => {
     const loadModels = async () => {
       const MODEL_URL = '/models';
       await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-      ]);
+      ]);      
       setModelsLoaded(true);
     };
 
@@ -66,7 +67,6 @@ const FaceRecognition = ({searchQuery, user}) => {
   useEffect(() => {
     fetchStudents();
   }, [subject_id, date]);
-
 
   useEffect(() => {
     if (!loadingStudents && students.length > 0) {  
@@ -111,35 +111,29 @@ const FaceRecognition = ({searchQuery, user}) => {
 
   const handleVideoOnPlay = async () => {
     const labeledFaceDescriptors = await getLabeledFaceDescriptions();
-    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors);
-  
+    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.4);
     intervalRef.current = setInterval(async () => {
       if (webcamRef.current && webcamRef.current.video.readyState === 4) {
         const video = webcamRef.current.video;
         const displaySize = { width: video.videoWidth, height: video.videoHeight };
-  
         faceapi.matchDimensions(canvasRef.current, displaySize);
-  
         if (!modelsLoaded) return;
-  
-        const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
+        const options = new faceapi.TinyFaceDetectorOptions({
+          inputSize: 512,
+          scoreThreshold: 0.3,
+        });
+        const detections = await faceapi.detectAllFaces(video, options).withFaceLandmarks().withFaceDescriptors();
         if (!detections || detections.length === 0) {
           console.warn('No faces detected');
           return;
         }
-        
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
-  
-        // Check if canvasRef.current is not null before accessing its context
         if (canvasRef.current) {
           const ctx = canvasRef.current.getContext('2d');
           ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-  
           const results = resizedDetections.map((d) => faceMatcher.findBestMatch(d.descriptor));
-  
           results.forEach((result, i) => {
-            if (result.distance < 0.48) {
-              // Handle recognized faces
+            if (result.distance < 0.5) {
               setAttendedStudents((prevAttendedStudents) => {
                 if (!prevAttendedStudents.includes(result.label)) {
                   const recognizedStudent = students.find(student => student.facial_path === result.label);
@@ -150,13 +144,11 @@ const FaceRecognition = ({searchQuery, user}) => {
                       [recognizedStudent.id]: 'Present',
                     }));
                   }
-              
                   return [...prevAttendedStudents, result.label];
                 }
                 return prevAttendedStudents;
               });
             }else if (resizedDetections[i] && result.label === 'unknown') {
-              // Handle unrecognized faces
               if (resizedDetections[i] && resizedDetections[i].detection.box) {
                 const box = resizedDetections[i].detection.box;
                 const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown' });
@@ -164,11 +156,8 @@ const FaceRecognition = ({searchQuery, user}) => {
               } else {
                 console.warn('Invalid detection box for unrecognized face');
               }
-              
               console.log('Unknown face detected');
             }
-        
-            // Draw bounding box for recognized faces with a confidence level > 20%
             if (resizedDetections[i] && result.distance < 0.8 && result.label !== 'unknown') {
               const box = resizedDetections[i].detection.box;
               const drawBox = new faceapi.draw.DrawBox(box, { 
@@ -177,7 +166,6 @@ const FaceRecognition = ({searchQuery, user}) => {
               drawBox.draw(canvasRef.current);
             }
         });
-        
         }
       }
     }, 300);
@@ -185,21 +173,32 @@ const FaceRecognition = ({searchQuery, user}) => {
   
 
   const handleAttendanceChange = (studentId, value) => {
-    setAttendanceStatus((prev) => ({
-      ...prev,
-      [studentId]: value, 
-    }));
-    if (value === 'Present') {
-      setAttendedStudents((prev) => {
-          if (!prev.includes(studentId)) {
-              return [...prev, studentId];
+    setAttendanceStatus((prev) => {
+      // Update the status in the attendanceStatus
+      const updatedStatus = {
+        ...prev,
+        [studentId]: value,
+      };
+  
+      // If "Present" is selected, ensure the student is added to attendedStudents
+      if (value === 'Present') {
+        setAttendedStudents((prevAttendedStudents) => {
+          if (!prevAttendedStudents.includes(studentId)) {
+            return [...prevAttendedStudents, studentId];
           }
-          return prev;
-      });
-    } else {
-        setAttendedStudents((prev) => prev.filter(id => id !== studentId));
-    }
+          return prevAttendedStudents;
+        });
+      } else {
+        // If "Absent" or "Excused" is selected, remove from attendedStudents
+        setAttendedStudents((prevAttendedStudents) =>
+          prevAttendedStudents.filter(id => id !== studentId)
+        );
+      }
+  
+      return updatedStatus;
+    });
   };
+  
 
   useEffect(() => {
     if (attendedStudents.length > 0) {
@@ -361,43 +360,44 @@ const FaceRecognition = ({searchQuery, user}) => {
                     </Tr>
                   </Thead>
                   <Tbody>
-                    {filteredStudents.map((student) => {
-                      const options = ['Present', 'Absent', 'Excused'];
-                      const isPresent = student.status === 'Present';
-                      const isAbsent = student.status === 'Absent' ;
-                      const isExcused = student.status === 'Excused';
-                      const hasNoFacialPath = student.facial_path === '';
-                      return (
-                        <Tr key={student.id}>
-                          <Td padding='5px 10px'>
-                            {isPresent ? student.name : ''}
-                          </Td>
-                          <Td padding='5px 10px'>
-                            {isAbsent && !isPresent ? student.name : ''}
-                          </Td>
-                          <Td padding='5px 10px'>
-                            {isExcused && !isPresent ? student.name : ''}
-                          </Td>
-                          <Td padding='5px 10px'>
-                            {hasNoFacialPath ? student.name : ''}
-                          </Td>
-                          <Td padding='5px 10px'>
-                            <Stack direction="row">
-                              {options.map((option) => (
-                                <RadioCard
-                                  onChange={(e) => handleAttendanceChange(student.id, e.target.value)}
-                                  key={option}
-                                  value={option}
-                                  isChecked={attendanceStatus[student.id] === option} 
-                                >
-                                  {option}
-                                </RadioCard>
-                              ))}
-                            </Stack>
-                          </Td>
-                        </Tr>
-                      );
-                    })}
+                  {filteredStudents.map((student) => {
+                    const options = ['Present', 'Absent', 'Excused'];
+                    const isPresent = attendanceStatus[student.id] === 'Present';
+                    const isAbsent = attendanceStatus[student.id] === 'Absent';
+                    const isExcused = attendanceStatus[student.id] === 'Excused';
+                    const hasNoFacialPath = student.facial_path === '';
+
+                    return (
+                      <Tr key={student.id}>
+                        <Td padding='5px 10px'>
+                          {isPresent ? student.name : ''}
+                        </Td>
+                        <Td padding='5px 10px'>
+                          {isAbsent && !isPresent ? student.name : ''}
+                        </Td>
+                        <Td padding='5px 10px'>
+                          {isExcused && !isPresent ? student.name : ''}
+                        </Td>
+                        <Td padding='5px 10px'>
+                          {hasNoFacialPath ? student.name : ''}
+                        </Td>
+                        <Td padding='5px 10px'>
+                          <Stack direction="row">
+                            {options.map((option) => (
+                              <RadioCard
+                                onChange={(e) => handleAttendanceChange(student.id, e.target.value)}
+                                key={option}
+                                value={option}
+                                isChecked={attendanceStatus[student.id] === option} 
+                              >
+                                {option}
+                              </RadioCard>
+                            ))}
+                          </Stack>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
                   </Tbody>
 
                 </Table>

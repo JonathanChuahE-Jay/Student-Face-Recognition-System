@@ -2,7 +2,6 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
     const { prefix, name, email, password, facial_path, programme, currentIntakeSemester, currentIntakeYear } = req.body;
     let { profile_picture, student_id } = req.body;
 
-    // Validate required fields
     if (!name || !email || !password) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -40,6 +39,15 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
         return res.status(400).json({ error: 'Invalid email format' });
     }
 
+    if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).json({ error: 'Password must contain at least one number and one special character' });
+    }
+
     if (!profile_picture) {
         profile_picture = 'https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg';
     }
@@ -47,22 +55,18 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
     try {
         const hash = bcrypt.hashSync(password, 10);
 
-        // Check if the email already exists in the users table
         const emailExist = await database('users').where({ email: trimmedEmail }).first();
         if (emailExist) {
             return res.status(400).json({ error: 'Email already exists' });
         }
 
-        // Check if the student ID already exists in the students table
         const upper_case_student_Id = student_id.toUpperCase().replace(/\s+/g, '');
         const IDExist = await database('students').where('student_id', '=', upper_case_student_Id).first();
         if (IDExist) {
             return res.status(400).json({ error: 'Student ID already exists' });
         }
 
-        // Register the user and student
         await database.transaction(async (trx) => {
-            // Insert into users table
             const [newUser] = await trx('users')
                 .insert({
                     name,
@@ -73,10 +77,9 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
                 })
                 .returning('*');
 
-            // Insert into students table using the new user's ID
             const [newStudent] = await trx('students')
                 .insert({
-                    user_id: newUser.id, 
+                    user_id: newUser.id,
                     prefix,
                     student_id: upper_case_student_Id,
                     facial_path,
@@ -88,7 +91,6 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
                 })
                 .returning('*');
                 
-            // Add course to subjects
             const courseSubjects = await trx('courses')
                 .join('course_subjects', 'courses.id', 'course_subjects.course_id')
                 .select('course_subjects.*')
@@ -102,6 +104,7 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
                     semester: subject.semester,
                 });
             }
+
             const user = {
                 user_id: newUser.id,
                 name: newUser.name,
@@ -123,6 +126,5 @@ const handleStudentRegister = (database, bcrypt) => async (req, res) => {
         res.status(500).json({ error: 'Failed to register user', details: err.message });
     }
 };
-
 
 module.exports = { handleStudentRegister };

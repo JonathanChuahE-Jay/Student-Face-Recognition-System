@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Grid, GridItem, Text, useBreakpointValue } from "@chakra-ui/react";
+import { Box, Flex, Grid, GridItem, Heading, Text, useBreakpointValue } from "@chakra-ui/react";
 import Calendar from "react-calendar";
 import Lecturer_Daily_Report from '../../components/Report/Lecturer_Daily_Report';
 import { Chart } from "react-google-charts";
@@ -9,12 +9,12 @@ import { useEffect } from "react";
 
 const LecturerHome = ({ user, searchQuery }) => {
     const [subjects] = useState(user.subjectsData ? user.subjectsData : []);
-    const [attendances, setAttendances] = useState([]);
     const [selectedDate, setSelectedDate] = useState(new Date()); 
     const [counts, setCounts] = useState({ Present: 0, Absent: 0, Excused: 0 });
-
+    const [weeklyData, setWeeklyData] = useState([]);
+    const [weekRange, setWeekRange] = useState({});
     const calendarColSpan = useBreakpointValue({ base: 4, md: 1 }); 
-    const itemColSpan = useBreakpointValue({ base: 4, md: 3 });
+    const itemColSpan = useBreakpointValue({ base: 4, md: 3, lg:3 });
 
     const attendanceData = [
         ["Status", "Number of Students"],
@@ -28,51 +28,85 @@ const LecturerHome = ({ user, searchQuery }) => {
         is3D: false,
     };
 
+    const formatWeeklyDataForChart = () => {
+        if (!Array.isArray(weeklyData)) {
+            console.error("Weekly data is not an array:", weeklyData);
+            return []; 
+        }
+    
+        const chartData = [
+            ["Subject", "Present", "Absent", "Excused"]
+        ];
+    
+        weeklyData.forEach((entry) => {
+            chartData.push([
+                `${entry.subject_name}\nSection ${entry.section_number}`,
+                entry.Present || 0,
+                entry.Absent || 0,
+                entry.Excused || 0,
+            ]);
+        });
+    
+        return chartData;
+    };
+    
+
+    const weeklyChartOptions = {
+        title: "Weekly Attendance Report",
+        chartArea: { width: "50%" },
+        hAxis: {
+            title: "Attendance Count",
+            minValue: 0
+        },
+        vAxis: {
+            title: "Section"
+        },
+        isStacked: true,
+    };
+
     const fetchData = async () => {
         const subjectsAndSections = user.subjectsData.map(subject => ({
             subject_id: subject.subject_id,
             subject_section: subject.subject_section,
         }));
-
+    
         try {
             const localDate = moment(selectedDate).tz('Asia/Kuala_Lumpur').format('YYYY-MM-DD');
-            const response = await axios.post("http://localhost:5000/display-daily-report", { date:localDate, subjectsAndSections });
+            const response = await axios.post("http://localhost:5000/display-daily-report", { date: localDate, subjectsAndSections });
+            
             const reportData = response.data.result;
-            const subjectsWithSections = response.data.subjectsWithSectionsAndLecturers;
-
+    
             const lecturerSubjects = user.subjectsData || [];
-
+            
             const filteredReportData = reportData?.filter((d) =>
                 lecturerSubjects.some((subject) =>
                     subject.subject_id === d.subject_id && subject.subject_section === d.section_number
                 )
             ) || [];
 
-            const filteredSubjects = subjectsWithSections?.map((subject) => {
-                const filteredSections = subject.sections.filter((section) =>
-                    lecturerSubjects.some((lecturerSubject) =>
-                        lecturerSubject.subject_id === subject.id &&
-                        lecturerSubject.subject_section === section.section_number
-                    )
-                );
+            const weeklyReport = response.data.weeklyReport;
 
-                return filteredSections.length > 0 ? { ...subject, sections: filteredSections } : null;
-            }).filter(Boolean) || [];
+            if (Array.isArray(weeklyReport)) {
+                setWeeklyData(weeklyReport); 
+            } else {
+                console.error("weeklyReport is not an array:", weeklyReport);
+                setWeeklyData([]);
+            }
+            const weekRange = response.data.weekRange;
 
-            setAttendances(filteredReportData);
-
+            setWeekRange(weekRange);
+    
             const presentCount = filteredReportData.filter((d) => d.status === "Present").length || 0;
             const absentCount = filteredReportData.filter((d) => d.status === "Absent").length || 0;
             const excusedCount = filteredReportData.filter((d) => d.status === "Excused").length || 0;
-
+    
             setCounts({ Present: presentCount, Absent: absentCount, Excused: excusedCount });
         } catch (error) {
             console.error("Error fetching report:", error);
-            setAttendances([]);
             setCounts({ Present: 0, Absent: 0, Excused: 0 });
         }
     };
-
+    
     useEffect(() => {
         fetchData();
     }, [selectedDate]);
@@ -113,24 +147,32 @@ const LecturerHome = ({ user, searchQuery }) => {
                 padding={3} 
                 rowSpan={1}
                 display="flex"
-                justifyContent="center"
-                alignItems="center"
+                justifyContent='center'
+                flexDirection='column'
             >
-                <Grid gap={5} templateColumns="repeat(2, 1fr)">
-                    <Chart
-                        chartType="PieChart"
-                        width="100%"
-                        data={attendanceData}
-                        options={chartOptions}
-                    />
-                    <Chart
-                        chartType="PieChart"
-                        width="100%"
-                        data={attendanceData}
-                        options={chartOptions}
-                    />
+               <Grid gap={5} templateColumns="repeat(2, 1fr)"  overflowY="scroll">
+                    <GridItem colSpan={1}>
+                        <Box maxHeight="350px">
+                            <Chart
+                                chartType="PieChart"
+                                data={attendanceData}
+                                options={chartOptions}
+                                height="100%"
+                            />
+                        </Box>
+                    </GridItem>
+                    
+                    <GridItem colSpan={1}>
+                        <Box maxHeight="350px">
+                            <Chart
+                                chartType="BarChart"
+                                data={formatWeeklyDataForChart()}
+                                options={weeklyChartOptions}
+                                height="100%"
+                            />
+                        </Box>
+                    </GridItem>
                 </Grid>
-               
             </GridItem>
 
             {/* Calendar Section */}

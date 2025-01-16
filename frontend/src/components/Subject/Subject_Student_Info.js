@@ -36,7 +36,7 @@ const SubjectStudentInfo = ({ user }) => {
       case "late":
         return <Icon as={FaClock} color="orange.500" />;
       default:
-        return null; // No icon for unknown statuses
+        return null; 
     }
   };
 

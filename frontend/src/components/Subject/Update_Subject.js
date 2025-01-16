@@ -41,7 +41,6 @@ import AssignedStudent from './Assigned_Student';
 
 const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose }) => {
     
-    // State management
     const [sectionTimes, setSectionTimes] = useState([]);
     const [subjectCode, setSubjectCode] = useState(subject.code || '');
     const [subjectName, setSubjectName] = useState(subject.name || '');
@@ -53,7 +52,6 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
     const [venue, setVenue] = useState(Array(numberOfSections).fill(''));
     const [maxStudents, setMaxStudents]= useState([]);
     
-    // Modal management for delete confirmation
     const { isOpen: isOpenDeleteModal, onOpen: onOpenDeleteModal, onClose: onCloseDeleteModal } = useDisclosure();
     const { isOpen: isOpenSectionDrawer, onOpen: onOpenSectionDrawer, onClose: onCloseSectionDrawer} = useDisclosure();
     const { isOpen: isOpenAssignStudent, onOpen: onOpenAssignStudent, onClose: onCloseAssignStudent } = useDisclosure()
@@ -62,7 +60,6 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
     const toast = useToast();
     const Ref = useRef();
 
-    // Handle changes in subject section and set "Others" if needed
     useEffect(() => {
         if (!['Free Module', 'Technical Electives', 'College Compulsory', 'MPU Compulsory', 'Core'].includes(subject.section)) {
             setSubjectSection('None of these above');
@@ -82,12 +79,10 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
         setSectionTimes(e)
     }
 
-    // Handlers for form inputs
     const handleSubjectCode = (e) => setSubjectCode(e.target.value);
     const handleSubjectName = (e) => setSubjectName(e.target.value);
     const handleNumberOfSectionsChange = (value) => setNumberOfSections(parseInt(value));
 
-    // Handle image compression and preview
     const handleProfilePicture = async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -107,7 +102,6 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
         }
     };
 
-    // Handle selection of subject section
     const handleSubjectSectionChange = (e) => {
         const selectedSection = e.target.value;
         setSubjectSection(selectedSection);
@@ -116,7 +110,6 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
         }
     };
 
-    // Submit handler for updating subject
     const handleSubmit = (e) => {
         e.preventDefault();
 
@@ -179,7 +172,6 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
             });
     };
 
-    // Submit handler for deleting subject
     const handleDeleteSubject = () => {
         axios.post('http://localhost:5000/delete-subject', { id: subject.id })
             .then(response => {
@@ -220,7 +212,6 @@ const UpdateSubject = ({user, onReset, sections, isDisabled, subject, onClose })
             })
     };
     
-    // Determine the text or icon for the buttons based on screen size
     const deleteLabel = useBreakpointValue({ base: "", md: " Delete" });
     const updateLabel = useBreakpointValue({ base: "", md: " Update" });
     const backLabel = useBreakpointValue({ base: "", md: " Back" });

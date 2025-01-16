@@ -23,11 +23,12 @@ import axios from "axios";
 import { AppProvider, AppContext } from "./Context/AppProvider";
 import LecturerHome from "./Pages/Home/Lecturer_Home";
 import FaceRecognition from "./components/FaceRecognition/Face_Recognition";
-import { FaHome, FaBook, FaClipboardList, FaUserGraduate, FaChalkboardTeacher } from 'react-icons/fa';
+import { FaHome, FaBook, FaClipboardList, FaUserGraduate, FaChalkboardTeacher, FaRegistered } from 'react-icons/fa';
 import { MdInsertDriveFile } from "react-icons/md";
 import Gate from "./Context/GateProvider";
 import NotAuthorized from "./Pages/Unauthorized/Not_Authorized";
 import SubjectStudentInfo from "./components/Subject/Subject_Student_Info";
+import SubjectRegistration from "./Pages/Students/Subject_Registration";
 
 
 const ICON_SIZE = { large: "25px", medium: "20px" };
@@ -49,6 +50,7 @@ const roleBasedLinks = {
   student: [
     { path: "/", label: "Home", icon: <FaHome fontSize={ICON_SIZE.large} /> },
     { path: "/subject-management/page/1", label: "Subject Management", icon: <FaClipboardList fontSize={ICON_SIZE.medium} /> },
+    { path: "/subject-registration", label: "Subject Registration", icon: <FaRegistered fontSize={ICON_SIZE.medium} /> },
     
   ]
 };
@@ -238,20 +240,20 @@ const App = () => {
                 path="/setting"
                 element={
                   <Gate role={user.role} allowedRoles={["admin","lecturer","student"]}>
-                    <Settings /> 
+                    <Settings user={user}/> 
                   </Gate>
                 }
               />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route
-                  path="/course-management/page/:page"
-                  element={
-                    <Gate role={user.role} allowedRoles={["admin"]}>
-                      <CourseManagement searchQuery={searchQuery} isMobile={isMobile} />
-                    </Gate>
-                  }
-                />
+              <Route
+                path="/course-management/page/:page"
+                element={
+                  <Gate role={user.role} allowedRoles={["admin"]}>
+                    <CourseManagement searchQuery={searchQuery} isMobile={isMobile} />
+                  </Gate>
+                }
+              />
               <Route
                 path="/subject-management/page/:page"
                 element={
@@ -327,6 +329,14 @@ const App = () => {
               <Route
                 path="/not-authorized"
                 element={<NotAuthorized redirectPath={roleBasedLinks[user.role]?.[0]?.path || "/"} />}
+              />
+              <Route
+                path="/subject-registration"
+                element={
+                  <Gate role={user.role} allowedRoles={["student"]}>
+                    <SubjectRegistration searchQuery={searchQuery}  user={user} />
+                  </Gate>
+                }
               />
             </Routes>
           </Box>
