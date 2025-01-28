@@ -421,14 +421,26 @@ const Show_Attendance = ({searchQuery, user}) => {
             });
     
             if (response.status === 200) {
-                toast({
-                    title: 'Class started',
-                    position: 'top-right',
-                    description: `Class started by ${user.name}`,
-                    status: "success",
-                    duration: 1000,
-                    isClosable: true,
-                });
+                if(time === 'start'){
+                    toast({
+                        title: `Class started`,
+                        position: 'top-right',
+                        description: `Class started by ${user.name}`,
+                        status: "success",
+                        duration: 1000,
+                        isClosable: true,
+                    });
+                }else{
+                    toast({
+                        title: `Class ended`,
+                        position: 'top-right',
+                        description: `Class ended by ${user.name}`,
+                        status: "warning",
+                        duration: 1000,
+                        isClosable: true,
+                    });
+                }
+                
             }
         } catch (error) {
             console.error("Error starting class:", error.response || error.message);

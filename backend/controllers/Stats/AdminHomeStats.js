@@ -23,6 +23,12 @@ const handleAdminHomeStats = (database) => async (req, res) => {
       return total > 0 ? (presentCount / total) * 100 : 0;
     };
 
+    // Calculate the current/total attendance ratio for both weeks
+    const currentWeekTotal = currentWeekAttendance.length;
+    const currentWeekPresent = currentWeekAttendance.filter(att => att.status === 'Present').length;
+    const previousWeekTotal = previousWeekAttendance.length;
+    const previousWeekPresent = previousWeekAttendance.filter(att => att.status === 'Present').length;
+
     const currentWeekPercentage = calculatePercentage(currentWeekAttendance);
     const previousWeekPercentage = calculatePercentage(previousWeekAttendance);
 
@@ -54,6 +60,8 @@ const handleAdminHomeStats = (database) => async (req, res) => {
       attendance: {
         currentWeekPercentage: currentWeekPercentage.toFixed(2),
         previousWeekPercentage: previousWeekPercentage.toFixed(2),
+        currentWeekAttendance: `${currentWeekPresent}/${currentWeekTotal}`,  // Add current/total attendance for this week
+        previousWeekAttendance: `${previousWeekPresent}/${previousWeekTotal}`, // Add current/total attendance for last week
       },
       totalStudents,
       topSubjects: {

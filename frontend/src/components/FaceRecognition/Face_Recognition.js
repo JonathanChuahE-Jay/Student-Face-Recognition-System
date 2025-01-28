@@ -6,14 +6,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import RadioCard from "../Radio/Radio_Card";
 
-const FaceRecognition = ({searchQuery, user}) => {
+const FaceRecognition = ({ searchQuery, user }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isWebcamActive, setIsWebcamActive] = useState(true);
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
-  const [showErrorModal, setShowErrorModal] = useState(false); 
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [attendedStudents, setAttendedStudents] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState({});
 
@@ -22,7 +22,7 @@ const FaceRecognition = ({searchQuery, user}) => {
   const { subject_id, date, section } = location.state || {};
   const navigate = useNavigate();
   const toast = useToast();
-  
+
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = '/models';
@@ -31,7 +31,7 @@ const FaceRecognition = ({searchQuery, user}) => {
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-      ]);      
+      ]);
       setModelsLoaded(true);
     };
 
@@ -45,22 +45,22 @@ const FaceRecognition = ({searchQuery, user}) => {
 
   const fetchStudents = async () => {
     try {
-        const response = await axios.post('/display-class-students', { subject_id, date, section });
+      const response = await axios.post('/display-class-students', { subject_id, date, section });
 
-        const fetchedStudents = response.data.allStudentsInSubject;
+      const fetchedStudents = response.data.allStudentsInSubject;
 
-        setStudents(fetchedStudents);
+      setStudents(fetchedStudents);
 
-        const initialAttendanceStatus = fetchedStudents.reduce((acc, student) => {
-            acc[student.id] = student.status || 'Absent'; 
-            return acc;
-        }, {});
+      const initialAttendanceStatus = fetchedStudents.reduce((acc, student) => {
+        acc[student.id] = student.status || 'Absent';
+        return acc;
+      }, {});
 
-        setAttendanceStatus(initialAttendanceStatus); 
+      setAttendanceStatus(initialAttendanceStatus);
     } catch (error) {
-        console.error('Error fetching students:', error);
+      console.error('Error fetching students:', error);
     } finally {
-        setLoadingStudents(false);
+      setLoadingStudents(false);
     }
   };
 
@@ -69,33 +69,33 @@ const FaceRecognition = ({searchQuery, user}) => {
   }, [subject_id, date]);
 
   useEffect(() => {
-    if (!loadingStudents && students.length > 0) {  
+    if (!loadingStudents && students.length > 0) {
       const hasFacialPath = students.some((student) => student.facial_path !== '');
-      
+
       if (!hasFacialPath) {
-        setShowErrorModal(true); 
+        setShowErrorModal(true);
       }
     }
   }, [loadingStudents, students]);
-  
+  // Generate labeled face descriptors for each student with a valid facial path
   const getLabeledFaceDescriptions = async () => {
-    const filteredStudents = students.filter(student => student.facial_path !== ''); 
+    const filteredStudents = students.filter(student => student.facial_path !== '');
     const labels = filteredStudents.map(student => student.facial_path);
-  
+
     return Promise.all(
       labels.map(async (label) => {
         try {
           const descriptions = [];
           const img = await faceapi.fetchImage(`http://localhost:5000/uploads/${label}`);
           const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-  
+
           if (detections) {
             descriptions.push(detections.descriptor);
           } else {
             console.log(`No detection found for label: ${label}`);
-            descriptions.push(new Float32Array(128));  
+            descriptions.push(new Float32Array(128));
           }
-  
+
           return new faceapi.LabeledFaceDescriptors(label, descriptions);
         } catch (err) {
           console.error(`Error fetching/processing image for label ${label}:`, err);
@@ -108,10 +108,12 @@ const FaceRecognition = ({searchQuery, user}) => {
   const filteredStudents = students.filter((student) =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
+// Handle video playback and perform face recognition in real-time
   const handleVideoOnPlay = async () => {
+    // Fetch labeled descriptors
     const labeledFaceDescriptors = await getLabeledFaceDescriptions();
-    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.4);
+    // Initialize face matcher with threshold
+    const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
     intervalRef.current = setInterval(async () => {
       if (webcamRef.current && webcamRef.current.video.readyState === 4) {
         const video = webcamRef.current.video;
@@ -120,7 +122,8 @@ const FaceRecognition = ({searchQuery, user}) => {
         if (!modelsLoaded) return;
         const options = new faceapi.TinyFaceDetectorOptions({
           inputSize: 512,
-          scoreThreshold: 0.3,
+          // Detection sensitivity threshold
+          scoreThreshold: 0.4,
         });
         const detections = await faceapi.detectAllFaces(video, options).withFaceLandmarks().withFaceDescriptors();
         if (!detections || detections.length === 0) {
@@ -130,14 +133,16 @@ const FaceRecognition = ({searchQuery, user}) => {
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
         if (canvasRef.current) {
           const ctx = canvasRef.current.getContext('2d');
+          // Clear canvas
           ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
           const results = resizedDetections.map((d) => faceMatcher.findBestMatch(d.descriptor));
           results.forEach((result, i) => {
-            if (result.distance < 0.5) {
+             // Recognized face within a confident threshold
+            if (result.distance < 0.55) {
               setAttendedStudents((prevAttendedStudents) => {
                 if (!prevAttendedStudents.includes(result.label)) {
                   const recognizedStudent = students.find(student => student.facial_path === result.label);
-              
+
                   if (recognizedStudent) {
                     setAttendanceStatus(prev => ({
                       ...prev,
@@ -148,7 +153,8 @@ const FaceRecognition = ({searchQuery, user}) => {
                 }
                 return prevAttendedStudents;
               });
-            }else if (resizedDetections[i] && result.label === 'unknown') {
+            } else if (resizedDetections[i] && result.label === 'unknown') {
+               // Handle unknown face detection
               if (resizedDetections[i] && resizedDetections[i].detection.box) {
                 const box = resizedDetections[i].detection.box;
                 const drawBox = new faceapi.draw.DrawBox(box, { label: 'Unknown' });
@@ -159,18 +165,19 @@ const FaceRecognition = ({searchQuery, user}) => {
               console.log('Unknown face detected');
             }
             if (resizedDetections[i] && result.distance < 0.8 && result.label !== 'unknown') {
+              // Display recognized face with confidence score
               const box = resizedDetections[i].detection.box;
-              const drawBox = new faceapi.draw.DrawBox(box, { 
-                label: `${result.label} (${((1 - result.distance) * 100).toFixed(2)}%)` 
+              const drawBox = new faceapi.draw.DrawBox(box, {
+                label: `${result.label} (${((1 - result.distance) * 100).toFixed(2)}%)`
               });
               drawBox.draw(canvasRef.current);
             }
-        });
+          });
         }
       }
     }, 300);
   };
-  
+
 
   const handleAttendanceChange = (studentId, value) => {
     setAttendanceStatus((prev) => {
@@ -179,7 +186,7 @@ const FaceRecognition = ({searchQuery, user}) => {
         ...prev,
         [studentId]: value,
       };
-  
+
       // If "Present" is selected, ensure the student is added to attendedStudents
       if (value === 'Present') {
         setAttendedStudents((prevAttendedStudents) => {
@@ -194,118 +201,118 @@ const FaceRecognition = ({searchQuery, user}) => {
           prevAttendedStudents.filter(id => id !== studentId)
         );
       }
-  
+
       return updatedStatus;
     });
   };
-  
+
 
   useEffect(() => {
     if (attendedStudents.length > 0) {
-      const hasAttendanceChanged = students.some(student => 
+      const hasAttendanceChanged = students.some(student =>
         attendanceStatus[student.id] && attendanceStatus[student.id] !== student.status
       );
-  
+
       if (hasAttendanceChanged) {
-        handleConfirmClass(); 
+        handleConfirmClass();
       }
     }
   }, [attendedStudents, attendanceStatus]);
-  
-  const handleConfirmClass = async() => {
+
+  const handleConfirmClass = async () => {
     const transformedAttendance = Object.entries(attendanceStatus)
-    .map(([student_id, status]) => ({
-      student_id,
-      status
-    }));
+      .map(([student_id, status]) => ({
+        student_id,
+        status
+      }));
     try {
       const response = await axios.post('/add-attendance', {
-          subject_id,
-          records: transformedAttendance,
-          date
+        subject_id,
+        records: transformedAttendance,
+        date
       });
 
       if (response.status === 201) {
-          toast({
-              title: 'Success',
-              position: 'top-right',
-              description: 'Attendance records successfully saved!',
-              status: 'success',
-              duration: 1000,
-              isClosable: true,
-          });
-          await fetchStudents();
+        toast({
+          title: 'Success',
+          position: 'top-right',
+          description: 'Attendance records successfully saved!',
+          status: 'success',
+          duration: 1000,
+          isClosable: true,
+        });
+        await fetchStudents();
       }
     } catch (err) {
-        console.error('Error saving attendance records:', err);
-        const errorMessage = err.response?.data?.error || 'Failed to save attendance records. Please try again.';
-        toast({
-            title: 'Error',
-            position: 'top-right',
-            description: errorMessage,
-            status: 'error',
-            duration: 1000,
-            isClosable: true,
-        });
+      console.error('Error saving attendance records:', err);
+      const errorMessage = err.response?.data?.error || 'Failed to save attendance records. Please try again.';
+      toast({
+        title: 'Error',
+        position: 'top-right',
+        description: errorMessage,
+        status: 'error',
+        duration: 1000,
+        isClosable: true,
+      });
     }
   }
 
-  const handleEndClass = async() => {
-      try {
-        handleConfirmClass();
-        const time = 'end';
+  const handleEndClass = async () => {
+    try {
+      handleConfirmClass();
+      const time = 'end';
 
-        if (!subject_id || !user) {
-            console.error("Missing subject_id or user");
-            throw new Error("Missing subject_id or user information");
-        }
+      if (!subject_id || !user) {
+        console.error("Missing subject_id or user");
+        throw new Error("Missing subject_id or user information");
+      }
 
-        const response = await axios.post('/alter-session-logs', {
-            subject_id,
-            section,
-            user,
-            time,
-            date
-        });
+      const response = await axios.post('/alter-session-logs', {
+        subject_id,
+        section,
+        user,
+        time,
+        date
+      });
 
-        if (response.status === 200) {
-            toast({
-                title: 'Class started',
-                position: 'top-right',
-                description: `Class ${time === 'end'? 'ended' : 'started' } by ${user.name}`,
-                status: "success",
-                duration: 1000,
-                isClosable: true,
-            });
-        }
-    } catch (error) {
-        console.error("Error starting class:", error.response || error.message);
+      if (response.status === 200) {
         toast({
-            title: 'Error',
-            position: 'top-right',
-            description: error.response?.data?.message || "There was an error starting the class.",
-            status: "error",
-            duration: 1000,
-            isClosable: true,
+          title: 'Class started',
+          position: 'top-right',
+          description: `Class ${time === 'end' ? 'ended' : 'started'} by ${user.name}`,
+          status: "success",
+          duration: 1000,
+          isClosable: true,
         });
-    }finally{
+      }
+    } catch (error) {
+      console.error("Error starting class:", error.response || error.message);
+      toast({
+        title: 'Error',
+        position: 'top-right',
+        description: error.response?.data?.message || "There was an error starting the class.",
+        status: "error",
+        duration: 1000,
+        isClosable: true,
+      });
+    } finally {
       navigate(-1);
     }
   }
 
-  const totalPresent = students.filter(student => 
+  const totalPresent = students.filter(student =>
     attendanceStatus[student.id] === 'Present'
   ).length;
-  
-  const totalAbsent = students.filter(student => 
+
+  const totalAbsent = students.filter(student =>
     attendanceStatus[student.id] === 'Absent'
   ).length;
-  
-  const totalExcused = students.filter(student => 
-    attendanceStatus[student.id] === 'Excused' 
+
+  const totalExcused = students.filter(student =>
+    attendanceStatus[student.id] === 'Excused'
   ).length;
 
-  const totalNoFacialPath = students.filter(student => 
+  const totalNoFacialPath = students.filter(student =>
     student.facial_path === ''
   ).length;
 
@@ -320,96 +327,96 @@ const FaceRecognition = ({searchQuery, user}) => {
             </Center>
           ) : isWebcamActive ? (
             <>
-            <Flex flexDirection='row' width='100%' height='100%'>
-              <Flex flexDirection='column' position='relative' width='640px' height='480px'>
-                <Webcam
-                  ref={webcamRef}
-                  audio={false}
-                  width={640}
-                  height={480}
-                  onUserMedia={handleVideoOnPlay}
-                  videoConstraints={{ facingMode: "user" }}
-                />
-                <canvas
-                  ref={canvasRef}
-                  style={{ position: 'absolute', top: 0, left:  0 }}
-                  width={640}
-                  height={480}
-                />
-              </Flex>
-              
-              <Flex flexDirection='column' justifyContent='space-between' alignItems='flex-start' padding='10px' height='480px' maxHeight='480px' overflowY='auto'>
-                <Table>
-                  <Thead>
-                    <Tr>
-                      <Th padding='0px 10px'>
-                        Present {totalPresent}
-                      </Th>
-                      <Th padding='0px 10px'>
-                        Absent {totalAbsent}
-                      </Th>
-                      <Th padding='0px 10px'>
-                        Excused {totalExcused}
-                      </Th>
-                      <Th padding='0px 10px'>
-                        No Facial Path {totalNoFacialPath}
-                      </Th>
-                      <Th padding='0px 10px' textAlign='center'>
-                        Actions
-                      </Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                  {filteredStudents.map((student) => {
-                    const options = ['Present', 'Absent', 'Excused'];
-                    const isPresent = attendanceStatus[student.id] === 'Present';
-                    const isAbsent = attendanceStatus[student.id] === 'Absent';
-                    const isExcused = attendanceStatus[student.id] === 'Excused';
-                    const hasNoFacialPath = student.facial_path === '';
+              <Flex flexDirection='row' width='100%' height='100%'>
+                <Flex flexDirection='column' position='relative' width='640px' height='480px'>
+                  <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    width={640}
+                    height={480}
+                    onUserMedia={handleVideoOnPlay}
+                    videoConstraints={{ facingMode: "user" }}
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    style={{ position: 'absolute', top: 0, left: 0 }}
+                    width={640}
+                    height={480}
+                  />
+                </Flex>
 
-                    return (
-                      <Tr key={student.id}>
-                        <Td padding='5px 10px'>
-                          {isPresent ? student.name : ''}
-                        </Td>
-                        <Td padding='5px 10px'>
-                          {isAbsent && !isPresent ? student.name : ''}
-                        </Td>
-                        <Td padding='5px 10px'>
-                          {isExcused && !isPresent ? student.name : ''}
-                        </Td>
-                        <Td padding='5px 10px'>
-                          {hasNoFacialPath ? student.name : ''}
-                        </Td>
-                        <Td padding='5px 10px'>
-                          <Stack direction="row">
-                            {options.map((option) => (
-                              <RadioCard
-                                onChange={(e) => handleAttendanceChange(student.id, e.target.value)}
-                                key={option}
-                                value={option}
-                                isChecked={attendanceStatus[student.id] === option} 
-                              >
-                                {option}
-                              </RadioCard>
-                            ))}
-                          </Stack>
-                        </Td>
+                <Flex flexDirection='column' justifyContent='space-between' alignItems='flex-start' padding='10px' height='480px' maxHeight='480px' overflowY='auto'>
+                  <Table>
+                    <Thead>
+                      <Tr>
+                        <Th padding='0px 10px'>
+                          Present {totalPresent}
+                        </Th>
+                        <Th padding='0px 10px'>
+                          Absent {totalAbsent}
+                        </Th>
+                        <Th padding='0px 10px'>
+                          Excused {totalExcused}
+                        </Th>
+                        <Th padding='0px 10px'>
+                          No Facial Path {totalNoFacialPath}
+                        </Th>
+                        <Th padding='0px 10px' textAlign='center'>
+                          Actions
+                        </Th>
                       </Tr>
-                    );
-                  })}
-                  </Tbody>
+                    </Thead>
+                    <Tbody>
+                      {filteredStudents.map((student) => {
+                        const options = ['Present', 'Absent', 'Excused'];
+                        const isPresent = attendanceStatus[student.id] === 'Present';
+                        const isAbsent = attendanceStatus[student.id] === 'Absent';
+                        const isExcused = attendanceStatus[student.id] === 'Excused';
+                        const hasNoFacialPath = student.facial_path === '';
 
-                </Table>
+                        return (
+                          <Tr key={student.id}>
+                            <Td padding='5px 10px'>
+                              {isPresent ? student.name : ''}
+                            </Td>
+                            <Td padding='5px 10px'>
+                              {isAbsent && !isPresent ? student.name : ''}
+                            </Td>
+                            <Td padding='5px 10px'>
+                              {isExcused && !isPresent ? student.name : ''}
+                            </Td>
+                            <Td padding='5px 10px'>
+                              {hasNoFacialPath ? student.name : ''}
+                            </Td>
+                            <Td padding='5px 10px'>
+                              <Stack direction="row">
+                                {options.map((option) => (
+                                  <RadioCard
+                                    onChange={(e) => handleAttendanceChange(student.id, e.target.value)}
+                                    key={option}
+                                    value={option}
+                                    isChecked={attendanceStatus[student.id] === option}
+                                  >
+                                    {option}
+                                  </RadioCard>
+                                ))}
+                              </Stack>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
+                    </Tbody>
+
+                  </Table>
+                </Flex>
               </Flex>
-            </Flex>
-            <Flex mt={4} width='100%' justifyContent='space-between'>
-              <Button width='45%' colorScheme='red' onClick={() => navigate(-1)}>
-                Go back
-              </Button>
-              <Button colorScheme='green' width='45%' onClick={()=>handleEndClass()} marginTop='10px'>End Class</Button>
-            </Flex>
-          </>
+              <Flex mt={4} width='100%' justifyContent='space-between'>
+                <Button width='45%' colorScheme='red' onClick={() => navigate(-1)}>
+                  Go back
+                </Button>
+                <Button colorScheme='green' width='45%' onClick={() => handleEndClass()} marginTop='10px'>End Class</Button>
+              </Flex>
+            </>
           ) : null}
         </>
       ) : (
@@ -427,11 +434,11 @@ const FaceRecognition = ({searchQuery, user}) => {
             <Text>No students have valid facial paths. Please check the data.</Text>
           </AlertDialogBody>
           <AlertDialogFooter>
-            <Button colorScheme='red' onClick={() => navigate(-1)}  mt={4}>
+            <Button colorScheme='red' onClick={() => navigate(-1)} mt={4}>
               Go back
             </Button>
           </AlertDialogFooter>
-          
+
         </AlertDialogContent>
       </AlertDialog>
     </Box>

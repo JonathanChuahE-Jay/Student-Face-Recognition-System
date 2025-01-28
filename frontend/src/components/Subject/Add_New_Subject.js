@@ -286,6 +286,9 @@ const AddNewSubject = ({ isDisabled, onClose, onUpdate }) => {
     };
 
     const onSubjectsCreated = async () => {
+        const successSubjects = [];
+        const errorSubjects = [];
+    
         for (const subject of jsonContent) {
             const {
                 subjectCode,
@@ -308,40 +311,45 @@ const AddNewSubject = ({ isDisabled, onClose, onUpdate }) => {
                 });
     
                 if (response.status === 201) {
-                    toast({
-                        title: 'Success',
-                        position: 'top-right',
-                        description: `Subject ${subjectName} successfully registered`,
-                        status: 'success',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    successSubjects.push(subjectName);
                 } else {
-                    toast({
-                        title: 'Error',
-                        position: 'top-right',
-                        description: response.data.error || `Error registering subject ${subjectName}`,
-                        status: 'error',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    errorSubjects.push({ name: subjectName, error: response.data.error || 'Unknown error' });
                 }
             } catch (error) {
                 const errorMessage = error.response?.data?.error || error.message;
-                toast({
-                    title: 'Error',
-                    position: 'top-right',
-                    description: `Error registering subject ${subjectName}: ${errorMessage}`,
-                    status: 'error',
-                    duration: 1000,
-                    isClosable: true,
-                });
+                errorSubjects.push({ name: subjectName, error: errorMessage });
             }
         }
-        
+    
+        if (successSubjects.length > 0) {
+            toast({
+                title: 'Subjects Registered',
+                position: 'top-right',
+                description: `${successSubjects.length} subjects successfully registered.`,
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+        }
+    
+        if (errorSubjects.length > 0) {
+            const errorDetails = errorSubjects
+                .map(({ name, error }) => `${name}: ${error}`)
+                .join(', ');
+            toast({
+                title: 'Errors Occurred',
+                position: 'top-right',
+                description: `Failed to register ${errorSubjects.length} subjects. ${errorDetails}`,
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        }
+    
         onUpdate();
         onClose();
     };
+    
     
     const handleSaveTime = () => {
         const formattedSectionTimes = sectionTimes.map((time, index) => {
@@ -670,9 +678,10 @@ const AddNewSubject = ({ isDisabled, onClose, onUpdate }) => {
             <ModalContent>
                 <ModalHeader>Parsed Subjects</ModalHeader>
                 <ModalCloseButton />
-                <ModalBody>
+                <ModalBody maxHeight="60vh" overflowY="auto">
                     {jsonContent.map((json, index) => (
                         <Box key={index} mb={4}>
+                            <Text fontSize="2xl" color='blue' fontWeight="bold">Subject Number: {index+1}</Text>
                             <Box mb={4}>
                                 <Text fontSize="lg" fontWeight="bold">Subject Name:</Text>
                                 <Text fontSize="md">{json.subjectName}</Text>
@@ -710,11 +719,11 @@ const AddNewSubject = ({ isDisabled, onClose, onUpdate }) => {
                         </Box>
                     ))}
                 </ModalBody>
-                <ModalFooter>
-                    <Button colorScheme="blue" onClick={onClose}>
+                <ModalFooter display='flex' justifyContent='space-between'>
+                    <Button colorScheme="red" onClick={onClose} width='25%'>
                         Close
                     </Button>
-                    <Button variant="ghost" onClick={onSubjectsCreated}>
+                    <Button  colorScheme="blue"onClick={onSubjectsCreated} width='25%'>
                         Submit
                     </Button>
                 </ModalFooter>

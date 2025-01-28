@@ -64,7 +64,9 @@ const Lecturer_Daily_Report = ({ date, user, searchQuery }) => {
                 </Tr>
             </Thead>
             <Tbody>
-                {filteredSubjects.map((subject, index) =>
+                {
+                filteredSubjects.length > 0 ? 
+                filteredSubjects.map((subject, index) =>
                     subject.sections.map((section, secIndex) => {
                         i++;
                         return (
@@ -77,7 +79,12 @@ const Lecturer_Daily_Report = ({ date, user, searchQuery }) => {
                             </Tr>
                         );
                     })
-                )}
+                )
+                :
+                <Tr>
+                    <Td textAlign='center' colSpan='5'>No subjects available</Td>
+                </Tr>
+                }
             </Tbody>
         </Table>
     );

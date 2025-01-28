@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Flex, Avatar, Box, Text, Badge, Divider, Button, useBreakpointValue, Tooltip, Checkbox, useToast } from "@chakra-ui/react";
+import { Flex, Avatar, Box, Text, Badge, Divider, Button, useBreakpointValue, Tooltip, Checkbox, useToast, useDisclosure, AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter } from "@chakra-ui/react";
 import { CalendarIcon, DeleteIcon, EditIcon, InfoIcon, InfoOutlineIcon, MinusIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData, handleUpdateSubject, handleDeleteConfirmation, handleMoreInfo }) => {
+const SubjectList = ({ setCurrentPage, user, fetchData, paginatedData, isDisabled, filteredData, handleUpdateSubject, handleDeleteConfirmation, handleMoreInfo }) => {
     const navigate = useNavigate();
     const toast = useToast();
     const [deleteCheckBoxBar, setDeleteCheckBoxBar] = useState(false);
-    const [checkedItems, setCheckedItems] = useState({}); 
+    const [checkedItems, setCheckedItems] = useState({});
 
     const deleteLabel = useBreakpointValue({ base: "", lg: " Delete" });
     const moreInfoLabel = useBreakpointValue({ base: "", lg: " More Info" });
@@ -21,6 +21,7 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
     const buttonSize = useBreakpointValue({ base: "sm", lg: "md" });
     const buttonMinWidth = useBreakpointValue({ base: "30px", lg: "120px" });
 
+    const { isOpen: isOpenDeleteMultipleModal, onOpen: onOpenDeleteMultipleModal, onClose: onCloseDeleteMultipleModal } = useDisclosure();
     const handleAttendanceNavigation = (subject) => {
         navigate(`/subject-info/show-attendance/${subject.name}`, {
             state: {
@@ -39,7 +40,7 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
     const handleCheckboxChange = (id) => {
         setCheckedItems(prev => ({
             ...prev,
-            [id]: !prev[id] 
+            [id]: !prev[id]
         }));
     };
 
@@ -48,16 +49,20 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
 
         const newCheckedItems = {};
         paginatedData.forEach(subject => {
-            newCheckedItems[subject.id] = !allChecked; 
+            newCheckedItems[subject.id] = !allChecked;
         });
 
         setCheckedItems(prev => ({
             ...prev,
-            ...newCheckedItems 
+            ...newCheckedItems
         }));
     };
 
     const handleDeleteSelectedSubjects = useCallback(async () => {
+        let successCount = 0;
+        let errorCount = 0;
+
+
         const selectedSubjectIds = Object.keys(checkedItems).filter(id => checkedItems[id]);
 
         if (selectedSubjectIds.length === 0) {
@@ -84,30 +89,39 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
             responses.forEach(response => {
                 const result = response.data;
                 if (result.message && result.message.includes('deleted successfully')) {
-                    toast({
-                        title: 'Success',
-                        position: 'top-right',
-                        description: result.message,
-                        status: 'success',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    successCount++;
                 } else {
-                    toast({
-                        title: 'Error',
-                        position: 'top-right',
-                        description: result.error || `Failed to delete subject`,
-                        status: 'error',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    errorCount++;
                 }
             });
+
+            if (successCount > 0) {
+                toast({
+                    title: 'Success',
+                    position: 'top-right',
+                    description: `${successCount} subject(s) deleted successfully.`,
+                    status: 'success',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+
+            if (errorCount > 0) {
+                toast({
+                    title: 'Error',
+                    position: 'top-right',
+                    description: `${errorCount} subject(s) failed to delete.`,
+                    status: 'error',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
 
             const newCheckedItems = { ...checkedItems };
             selectedSubjectIds.forEach(id => delete newCheckedItems[id]);
             setCheckedItems(newCheckedItems);
-            fetchData(); 
+            fetchData();
+            setCurrentPage(1);
 
         } catch (error) {
             toast({
@@ -140,19 +154,19 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
                                     Select All
                                 </Checkbox>
                             </Flex>
-                        )   
+                        )
                     }
-                    
+
                     {
                         filteredData.map((subject, index) => (
                             <Box key={index} mb={4}>
                                 <Divider mb={4} />
                                 <Flex alignItems="center">
                                     {
-                                        user.role ==='admin' && (
+                                        user.role === 'admin' && (
                                             <Checkbox
                                                 isChecked={!!checkedItems[subject.id]}
-                                                onChange={() => handleCheckboxChange(subject.id)}  
+                                                onChange={() => handleCheckboxChange(subject.id)}
                                                 mr={3}
                                             />
 
@@ -184,7 +198,7 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
                                             </Button>
                                         </Tooltip>
                                         {
-                                            user.role ==='admin' && (
+                                            user.role === 'admin' && (
                                                 <Tooltip isDisabled={isDisabled} label='Update' fontSize='md'>
                                                     <Button
                                                         padding='5px'
@@ -202,9 +216,9 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
                                             )
 
                                         }
-                                        
+
                                         {
-                                            (user.role ==='admin' || user.role ==='lecturer') && (
+                                            (user.role === 'admin' || user.role === 'lecturer') && (
                                                 <Tooltip isDisabled={isDisabled} label='Attendance' fontSize='md'>
                                                     <Button
                                                         padding='5px'
@@ -221,9 +235,9 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
                                                 </Tooltip>
                                             )
                                         }
-                                        
+
                                         {
-                                            user.role ==='admin' && (
+                                            user.role === 'admin' && (
                                                 <Tooltip isDisabled={isDisabled} label='Delete' fontSize='md'>
                                                     <Button
                                                         padding='5px'
@@ -239,44 +253,73 @@ const SubjectList = ({ user, fetchData, paginatedData, isDisabled, filteredData,
                                                     </Button>
                                                 </Tooltip>
                                             )
-                                            
+
                                         }
-                                        
+
                                     </Flex>
                                 </Flex>
                             </Box>
                         ))
                     }
                     {
-                      deleteCheckBoxBar? 
-                          <Flex
-                              zIndex='2'
-                              width='100%'
-                              height='50px'
-                              position='fixed'
-                              bottom='0'
-                              left='0'
-                              background='rgba(100, 105, 100, 0.4)'
-                              boxShadow='0 4px 30px rgba(0, 0, 0, 0.9)' 
-                              backdropFilter='blur(12.6px)'
-                              border='1px solid rgba(255, 255, 255, 0.98)'
-                              alignItems='center'
-                              justifyContent='space-evenly'
-                          >
-                              <Button width='45%' colorScheme="green" onClick={()=>{setCheckedItems({})}}>
-                                  <MinusIcon mr={2} />
-                                  Deselect all items
-                              </Button>
-                              <Button width='45%' colorScheme="red" onClick={()=>{handleDeleteSelectedSubjects()}}>
-                                  <DeleteIcon mr={2}/>
-                                  Delete selected items
-                              </Button>
-                          </Flex>
-                      :
-                          null
-                  }
+                        deleteCheckBoxBar ?
+                            <Flex
+                                zIndex='2'
+                                width='100%'
+                                height='50px'
+                                position='fixed'
+                                bottom='0'
+                                left='0'
+                                background='rgba(100, 105, 100, 0.4)'
+                                boxShadow='0 4px 30px rgba(0, 0, 0, 0.9)'
+                                backdropFilter='blur(12.6px)'
+                                border='1px solid rgba(255, 255, 255, 0.98)'
+                                alignItems='center'
+                                justifyContent='space-evenly'
+                            >
+                                <Button width='45%' colorScheme="green" onClick={() => { setCheckedItems({}) }}>
+                                    <MinusIcon mr={2} />
+                                    Deselect all items
+                                </Button>
+                                <Button width='45%' colorScheme="red" onClick={() => { onOpenDeleteMultipleModal() }}>
+                                    <DeleteIcon mr={2} />
+                                    Delete selected items
+                                </Button>
+                            </Flex>
+                            :
+                            null
+                    }
                 </>
             )}
+            <AlertDialog
+                isCentered
+                isOpen={isOpenDeleteMultipleModal}
+                onClose={onCloseDeleteMultipleModal}
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader fontSize='lg' fontWeight='bold'>
+                            Delete Subjects?
+                        </AlertDialogHeader>
+
+                        <AlertDialogBody>
+                            Are you sure? You can't undo this action afterwards.
+                        </AlertDialogBody>
+
+                        <AlertDialogFooter display='flex' justifyContent='space-between'>
+                            <Button width='25%' onClick={() => {
+                                onCloseDeleteMultipleModal()
+                                setCheckedItems({})
+                            }}>
+                                Cancel
+                            </Button>
+                            <Button width='25%' colorScheme='red' onClick={() => { handleDeleteSelectedSubjects() }} ml={3}>
+                                Delete
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </Box>
     );
 };

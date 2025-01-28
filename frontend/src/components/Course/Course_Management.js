@@ -1,6 +1,6 @@
 import React, { useEffect, useState, lazy, Suspense, useMemo, useRef, useCallback } from "react";
-import { Button, Card, CardBody, Image, Grid, Heading, Stack, Text, Flex, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, useDisclosure, Divider, Drawer, DrawerOverlay, DrawerContent, DrawerCloseButton, DrawerHeader, DrawerBody, Skeleton, CardFooter, Tooltip, Spinner, InputGroup, InputLeftElement, Input, InputRightElement, CloseButton, useBreakpointValue, IconButton, useColorModeValue, Checkbox, useToast } from '@chakra-ui/react';
-import { AddIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, MinusIcon} from "@chakra-ui/icons";
+import { Button, Card, CardBody, Image, Grid, Heading, Stack, Text, Flex, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, useDisclosure, Divider, Drawer, DrawerOverlay, DrawerContent, DrawerCloseButton, DrawerHeader, DrawerBody, Skeleton, CardFooter, Tooltip, Spinner, InputGroup, InputLeftElement, Input, InputRightElement, CloseButton, useBreakpointValue, IconButton, useColorModeValue, Checkbox, useToast, AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter } from '@chakra-ui/react';
+import { AddIcon, ChevronLeftIcon, ChevronRightIcon, DeleteIcon, MinusIcon } from "@chakra-ui/icons";
 import { useTooltip } from '../../Context/ToolTipContext';
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
@@ -9,7 +9,7 @@ const AddNewCourse = lazy(() => import("./Add_New_Course"));
 const UpdateCourse = lazy(() => import("./Update_Course"));
 const MoreInfo = lazy(() => import("./More_Info"));
 
-const CourseManagement = ({searchQuery, isMobile}) => {
+const CourseManagement = ({ searchQuery, isMobile }) => {
     const [courses, setCourses] = useState([]);
     const [course, setCourse] = useState([]);
     const [deleteCheckBoxBar, setDeleteCheckBoxBar] = useState(false);
@@ -17,9 +17,10 @@ const CourseManagement = ({searchQuery, isMobile}) => {
     const { isOpen: isOpenCreateModal, onOpen: onOpenCreateModal, onClose: onCloseCreateModal } = useDisclosure();
     const { isOpen: isOpenUpdateDrawer, onOpen: onOpenUpdateDrawer, onClose: onCloseUpdateDrawer } = useDisclosure();
     const { isOpen: isOpenInfoDrawer, onOpen: onOpenInfoDrawer, onClose: onCloseInfoDrawer } = useDisclosure();
+    const { isOpen: isOpenDeleteMultipleCourseModal, onOpen: onOpenDeleteMultipleCourseModal, onClose: onCloseDeleteMultipleCourseModal } = useDisclosure();
 
     const { isDisabled } = useTooltip();
-    const coursePerPage = useBreakpointValue({ base: 3, md: 5, lg: 7 , xl: 10 });
+    const coursePerPage = useBreakpointValue({ base: 3, md: 5, lg: 7, xl: 10 });
     const navigate = useNavigate();
     const { page } = useParams();
     const prevSearchQueryRef = useRef(searchQuery);
@@ -53,7 +54,7 @@ const CourseManagement = ({searchQuery, isMobile}) => {
     // Handle searchQuery onchange page change
     useEffect(() => {
         if (parseInt(page) !== currentPage) {
-          setCurrentPage(parseInt(page) || 1);
+            setCurrentPage(parseInt(page) || 1);
         }
     }, [page]);
 
@@ -70,46 +71,46 @@ const CourseManagement = ({searchQuery, isMobile}) => {
     }, [searchQuery]);
 
     // Filter based on search query
-    const filteredSubjects = useMemo(() => 
+    const filteredSubjects = useMemo(() =>
         courses.filter(course =>
             course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             course.course_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             course.course_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             course.course_programme.toLowerCase().includes(searchQuery.toLowerCase())
-        ), [courses, searchQuery]);    
+        ), [courses, searchQuery]);
 
     // Calculate the data for the current page
-    const paginatedData = useMemo(() => 
+    const paginatedData = useMemo(() =>
         filteredSubjects.slice(
             (currentPage - 1) * coursePerPage,
             currentPage * coursePerPage
         ), [filteredSubjects, currentPage, coursePerPage]);
-    
-    
-        const totalPages = Math.ceil(filteredSubjects.length / coursePerPage);
-    
-        const maxPageButtons = 4;
-        let startPage, endPage;
-    
-        if (totalPages <= maxPageButtons) {
+
+
+    const totalPages = Math.ceil(filteredSubjects.length / coursePerPage);
+
+    const maxPageButtons = 4;
+    let startPage, endPage;
+
+    if (totalPages <= maxPageButtons) {
+        startPage = 1;
+        endPage = totalPages;
+    } else {
+        const halfRange = Math.floor(maxPageButtons / 2);
+        if (currentPage <= halfRange) {
             startPage = 1;
+            endPage = maxPageButtons;
+        } else if (currentPage + halfRange >= totalPages) {
+            startPage = totalPages - maxPageButtons + 1;
             endPage = totalPages;
         } else {
-            const halfRange = Math.floor(maxPageButtons / 2);
-            if (currentPage <= halfRange) {
-                startPage = 1;
-                endPage = maxPageButtons;
-            } else if (currentPage + halfRange >= totalPages) {
-                startPage = totalPages - maxPageButtons + 1;
-                endPage = totalPages;
-            } else {
-                startPage = currentPage - halfRange;
-                endPage = currentPage + halfRange;
-            }
+            startPage = currentPage - halfRange;
+            endPage = currentPage + halfRange;
         }
-    
+    }
+
     const buttonSize = useBreakpointValue({ base: 'sm', md: 'md' });
-    
+
     // CheckBox related
     const [checkedItems, setCheckedItems] = useState({});
     const allChecked = paginatedData.every((course) => checkedItems[course.course_id]);
@@ -120,9 +121,11 @@ const CourseManagement = ({searchQuery, isMobile}) => {
         setDeleteCheckBoxBar(hasCheckedItems);
 
     }, [checkedItems]);
-    
-    
+
+
     const handleDeleteSelectedCourses = useCallback(async () => {
+        let successCount = 0;
+        let errorCount = 0;
         const selectedCoursesIds = Object.keys(checkedItems).filter(id => checkedItems[id]);
 
         if (selectedCoursesIds.length === 0) {
@@ -139,39 +142,47 @@ const CourseManagement = ({searchQuery, isMobile}) => {
 
         try {
             const deleteRequests = selectedCoursesIds.map(id =>
-                
+
                 axios.post('http://localhost:5000/delete-course', {
-                    id: id 
+                    id: id
                 })
             );
 
             const responses = await Promise.all(deleteRequests);
-            
+
             responses.forEach(response => {
                 const result = response.data;
                 if (result.message && result.message.includes('deleted successfully')) {
-                    toast({
-                        title: 'Success',
-                        position: 'top-right',
-                        description: result.message,
-                        status: 'success',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    successCount++;
                 } else {
-                    toast({
-                        title: 'Error',
-                        position: 'top-right',
-                        description: result.error || `Failed to delete student`,
-                        status: 'error',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    errorCount++;
                 }
             });
 
+            if (successCount > 0) {
+                toast({
+                    title: 'Success',
+                    position: 'top-right',
+                    description: `${successCount} course(s) deleted successfully.`,
+                    status: 'success',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+
+            if (errorCount > 0) {
+                toast({
+                    title: 'Error',
+                    position: 'top-right',
+                    description: `${errorCount} course(s) failed to delete.`,
+                    status: 'error',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+
             setCheckedItems({});
-            fetchData(); 
+            fetchData();
 
         } catch (error) {
             toast({
@@ -187,7 +198,7 @@ const CourseManagement = ({searchQuery, isMobile}) => {
 
     return (
         <Flex flexDirection='column' padding='10px'>
-            <Flex ml='auto'mr={5} mt={2}>
+            <Flex ml='auto' mr={5} mt={2}>
                 Select All
                 <Checkbox
                     ml={3}
@@ -205,38 +216,38 @@ const CourseManagement = ({searchQuery, isMobile}) => {
                     }}
                 />
             </Flex>
-            <Grid gap={5} templateColumns={{base: '1fr', sm: 'repeat(2, 1fr)',lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)'}} p={4}>
+            <Grid gap={5} templateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' }} p={4}>
                 <Tooltip label='Create course' isDisabled={isDisabled}>
-                <Card onClick={onOpenCreateModal} cursor='pointer' position="relative">
-                    <CardBody height='76%'>
-                        <Stack spacing={4} >
-                            <Skeleton height='200px' />
-                            <Skeleton height='20px' />
-                            <Skeleton height='20px' />
-                            <Skeleton height='20px' />
-                        </Stack>
-                    </CardBody>
-                    <Divider my={3} />
-                    <CardFooter  height='19%'>
-                        <Flex direction="column" alignItems="center" justifyContent="center" width="100%">
-                            <Flex
-                                position="absolute"
-                                top="50%"
-                                left="50%"
-                                transform="translate(-50%, -50%)"
-                                zIndex="1"
-                            >
-                                <Button colorScheme='blackAlpha' color='whitesmoke' width='200px'>
-                                    <AddIcon mr={1}/>Create
-                                </Button>
+                    <Card onClick={onOpenCreateModal} cursor='pointer' position="relative">
+                        <CardBody height='76%'>
+                            <Stack spacing={4} >
+                                <Skeleton height='200px' />
+                                <Skeleton height='20px' />
+                                <Skeleton height='20px' />
+                                <Skeleton height='20px' />
+                            </Stack>
+                        </CardBody>
+                        <Divider my={3} />
+                        <CardFooter height='19%'>
+                            <Flex direction="column" alignItems="center" justifyContent="center" width="100%">
+                                <Flex
+                                    position="absolute"
+                                    top="50%"
+                                    left="50%"
+                                    transform="translate(-50%, -50%)"
+                                    zIndex="1"
+                                >
+                                    <Button colorScheme='blackAlpha' color='whitesmoke' width='200px'>
+                                        <AddIcon mr={1} />Create
+                                    </Button>
+                                </Flex>
+                                <Flex width="100%" justifyContent="space-between">
+                                    <Skeleton height='20px' width='40%' />
+                                    <Skeleton height='20px' width='40%' />
+                                </Flex>
                             </Flex>
-                            <Flex width="100%" justifyContent="space-between">
-                                <Skeleton height='20px' width='40%' />
-                                <Skeleton height='20px' width='40%' />
-                            </Flex>
-                        </Flex>
-                    </CardFooter>
-                </Card>
+                        </CardFooter>
+                    </Card>
                 </Tooltip>
                 {paginatedData.map(course => (
                     <Card
@@ -246,7 +257,7 @@ const CourseManagement = ({searchQuery, isMobile}) => {
                     >
                         <Checkbox
                             mb={2}
-                            isChecked={!!checkedItems[course.course_id]} 
+                            isChecked={!!checkedItems[course.course_id]}
                             onChange={(e) => {
                                 const updatedCheckedItems = { ...checkedItems };
                                 updatedCheckedItems[course.course_id] = e.target.checked;
@@ -256,9 +267,11 @@ const CourseManagement = ({searchQuery, isMobile}) => {
 
                         <Flex justifyContent='center' height='40%'>
                             <Image
+                                height={{ base: '30%', sm: '200px' }}
+                                minH={{ base: '30%', sm: '200px' }}
                                 objectFit='cover'
-                                maxW={{ base: '50%', sm: '200px' }}
-                                maxH={{ base: '50%', sm: '200px' }}
+                                maxW={{ base: '30%', sm: '200px' }}
+                                maxH={{ base: '30%', sm: '200px' }}
                                 src={course.course_profile_picture || 'https://via.placeholder.com/150'}
                                 alt='Course Image'
                             />
@@ -274,68 +287,68 @@ const CourseManagement = ({searchQuery, isMobile}) => {
                             <Divider my={4} />
                             <Flex justifyContent='space-evenly' height='20%' marginTop='auto'>
                                 <Tooltip label='More info' isDisabled={isDisabled}>
-                                <Button onClick={() => handleMoreInfo(course)} width='40%' variant='solid' colorScheme='blue'>
-                                    More Info
-                                </Button>
+                                    <Button onClick={() => handleMoreInfo(course)} width='40%' variant='solid' colorScheme='blue'>
+                                        More Info
+                                    </Button>
                                 </Tooltip>
                                 <Tooltip label='Update course' isDisabled={isDisabled}>
-                                <Button onClick={()=> handleUpdate(course)} width='40%' variant='solid' colorScheme='teal'>
-                                    Update
-                                </Button>
+                                    <Button onClick={() => handleUpdate(course)} width='40%' variant='solid' colorScheme='teal'>
+                                        Update
+                                    </Button>
                                 </Tooltip>
                             </Flex>
                         </Stack>
                     </Card>
                 ))}
             </Grid>
-            <Flex mt={4} justifyContent="space-around" mb={deleteCheckBoxBar?"50px": ''}>
+            <Flex mt={4} justifyContent="space-around" mb={deleteCheckBoxBar ? "50px" : ''}>
                 <Tooltip isDisabled={isDisabled} label='Previous Page' fontSize='md'>
-                    <IconButton 
-                    size={buttonSize}
-                    icon={<ChevronLeftIcon />}
-                    onClick={() => {
-                        const newPage = Math.max(currentPage - 1, 1);
-                        navigate(`/course-management/page/${newPage}`);
-                    }}
-                    isDisabled={currentPage === 1}
-                    marginRight={'10px'}
+                    <IconButton
+                        size={buttonSize}
+                        icon={<ChevronLeftIcon />}
+                        onClick={() => {
+                            const newPage = Math.max(currentPage - 1, 1);
+                            navigate(`/course-management/page/${newPage}`);
+                        }}
+                        isDisabled={currentPage === 1}
+                        marginRight={'10px'}
                     />
                 </Tooltip>
                 <Flex mx={2}>
                     {startPage > 1 && (
                         <>
-                            <Button 
-                            size={buttonSize}
-                            mx={1} 
-                            onClick={() => navigate(`/course-management/page/1`)}
-                            colorScheme={currentPage === 1 ? "blue" : "gray"}
+                            <Button
+                                size={buttonSize}
+                                mx={1}
+                                onClick={() => navigate(`/course-management/page/1`)}
+                                colorScheme={currentPage === 1 ? "blue" : "gray"}
                             >
-                            1
+                                1
                             </Button>
                             {startPage > 2 && <Text mx={1}>...</Text>}
                         </>
                     )}
                     {Array.from({ length: Math.min(maxPageButtons, endPage - startPage + 1) }, (_, i) => startPage + i).map(number => (
                         <Button
-                        size={buttonSize}
-                        key={number}
-                        mx={1}
-                        onClick={() => navigate(`/course-management/page/${number}`)}
-                        colorScheme={number === currentPage ? "blue" : "gray"}
+                            size={buttonSize}
+                            key={number}
+                            mx={1}
+                            onClick={() => navigate(`/course-management/page/${number}`)}
+                            colorScheme={number === currentPage ? "blue" : "gray"}
                         >
-                        {number}
+                            {number}
                         </Button>
                     ))}
                     {endPage < totalPages && (
                         <>
                             {endPage < totalPages - 1 && <Text mx={1}>...</Text>}
-                            <Button 
-                            size={buttonSize}
-                            mx={1} 
-                            onClick={() => navigate(`/course-management/page/${totalPages}`)}
-                            colorScheme={totalPages === currentPage ? "blue" : "gray"}
+                            <Button
+                                size={buttonSize}
+                                mx={1}
+                                onClick={() => navigate(`/course-management/page/${totalPages}`)}
+                                colorScheme={totalPages === currentPage ? "blue" : "gray"}
                             >
-                            {totalPages}
+                                {totalPages}
                             </Button>
                         </>
                     )}
@@ -344,7 +357,7 @@ const CourseManagement = ({searchQuery, isMobile}) => {
                     <IconButton icon={<ChevronRightIcon />} onClick={() => {
                         const newPage = Math.min(currentPage + 1, totalPages);
                         navigate(`/course-management/page/${newPage}`);
-                        }}isDisabled={currentPage === totalPages} 
+                    }} isDisabled={currentPage === totalPages}
                     />
                 </Tooltip>
             </Flex>
@@ -364,57 +377,86 @@ const CourseManagement = ({searchQuery, isMobile}) => {
             </Modal>
 
             <Drawer placement="top" isOpen={isOpenUpdateDrawer} onClose={onCloseUpdateDrawer}>
-                <DrawerOverlay/>
+                <DrawerOverlay />
                 <DrawerContent>
                     <DrawerCloseButton />
                     <DrawerHeader>Update Course</DrawerHeader>
                     <DrawerBody>
-                        <Suspense fallback={<Flex height='100vh' alignItems='center' justifyContent='center' flexDirection='column'><Text  mb={5}>Loading... </Text><Spinner /></Flex>}>
-                            <UpdateCourse course={course} isDisabled={isDisabled} onClose={onCloseUpdateDrawer} onRefresh={fetchData}/>
+                        <Suspense fallback={<Flex height='100vh' alignItems='center' justifyContent='center' flexDirection='column'><Text mb={5}>Loading... </Text><Spinner /></Flex>}>
+                            <UpdateCourse course={course} isDisabled={isDisabled} onClose={onCloseUpdateDrawer} onRefresh={fetchData} />
                         </Suspense>
                     </DrawerBody>
                 </DrawerContent>
             </Drawer>
 
             <Drawer placement="bottom" isOpen={isOpenInfoDrawer} onClose={onCloseInfoDrawer}>
-                <DrawerOverlay/>
+                <DrawerOverlay />
                 <DrawerContent>
                     <DrawerCloseButton />
                     <DrawerHeader>More info</DrawerHeader>
                     <DrawerBody>
-                        <Suspense fallback={<Flex height='100vh' alignItems='center' justifyContent='center' flexDirection='column'><Text  mb={5}>Loading... </Text><Spinner /></Flex>}>
+                        <Suspense fallback={<Flex height='100vh' alignItems='center' justifyContent='center' flexDirection='column'><Text mb={5}>Loading... </Text><Spinner /></Flex>}>
                             <MoreInfo isDisabled={isDisabled} course={course} onClose={onCloseInfoDrawer} />
                         </Suspense>
                     </DrawerBody>
                 </DrawerContent>
             </Drawer>
             {
-                deleteCheckBoxBar? 
+                deleteCheckBoxBar ?
                     <Flex
-                        width={isMobile?'100%':'97%'}
+                        width={isMobile ? '100%' : '97%'}
                         height='50px'
                         position='fixed'
                         bottom='0'
-                        left={isMobile?'0':'10'}
+                        left={isMobile ? '0' : '10'}
                         background='rgba(100, 105, 100, 0.4)'
-                        boxShadow='0 4px 30px rgba(0, 0, 0, 0.9)' 
+                        boxShadow='0 4px 30px rgba(0, 0, 0, 0.9)'
                         backdropFilter='blur(12.6px)'
                         border='1px solid rgba(255, 255, 255, 0.98)'
                         alignItems='center'
                         justifyContent='space-evenly'
                     >
-                        <Button width='45%' colorScheme="green" onClick={()=>{setCheckedItems({})}}>
+                        <Button width='45%' colorScheme="green" onClick={() => { setCheckedItems({}) }}>
                             <MinusIcon mr={2} />
                             Deselect all items
                         </Button>
-                        <Button width='45%' colorScheme="red" onClick={()=>{handleDeleteSelectedCourses()}}>
-                            <DeleteIcon mr={2}/>
+                        <Button width='45%' colorScheme="red" onClick={() => { onOpenDeleteMultipleCourseModal() }}>
+                            <DeleteIcon mr={2} />
                             Delete selected items
                         </Button>
                     </Flex>
-                :
+                    :
                     null
             }
+            <AlertDialog
+                isCentered
+                isOpen={isOpenDeleteMultipleCourseModal}
+                onClose={onCloseDeleteMultipleCourseModal}
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader fontSize='lg' fontWeight='bold'>
+                            Delete Lecturer
+                        </AlertDialogHeader>
+
+                        <AlertDialogBody>
+                            Are you sure? You can't undo this action afterwards.
+                        </AlertDialogBody>
+
+                        <AlertDialogFooter justifyContent='space-between'>
+                            <Button onClick={() => { onCloseDeleteMultipleCourseModal() }}>
+                                Cancel
+                            </Button>
+                            <Button colorScheme='red' onClick={() => { 
+                                handleDeleteSelectedCourses()
+                                onCloseDeleteMultipleCourseModal()
+                                }} ml={3}>
+                                Delete
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </Flex>
     );
 }

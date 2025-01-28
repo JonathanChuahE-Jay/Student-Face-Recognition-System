@@ -33,7 +33,13 @@ import {
     Tr,
     Th,
     Td,
-    ModalFooter
+    ModalFooter,
+    AlertDialog,
+    AlertDialogOverlay,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogBody,
+    AlertDialogFooter
 } from '@chakra-ui/react';
 import emailjs from "@emailjs/browser";
 import info from "../../Assets/Images/parse_json_lecturer.png";
@@ -56,72 +62,71 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
     const [jsonContent, setJsonContent] = useState([]);
     const fileInputRef = useRef(null);
     const toast = useToast();
+    const [loading, setLoading] = useState(false);
 
-    const { isOpen: isOpenJsonModal, onOpen: onOpenJsonModal, onClose: onCloseJsonModal} = useDisclosure();
-
+    const { isOpen: isOpenJsonModal, onOpen: onOpenJsonModal, onClose: onCloseJsonModal } = useDisclosure();
+    
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file && file.type === "application/json") {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                const parsedJson = JSON.parse(e.target.result);
-                if (Array.isArray(parsedJson)) {
-                    let isValid = true;
-                    for (const lecturer of parsedJson) {
-                        if (
-                            !lecturer.lecturer_id ||
-                            !lecturer.name ||
-                            !lecturer.email ||
-                            !lecturer.password ||
-                            !lecturer.contact_number ||
-                            !lecturer.profile_picture
-                        ) {
-                            isValid = false;
-                            break;
+                    const parsedJson = JSON.parse(e.target.result);
+                    if (Array.isArray(parsedJson)) {
+                        let isValid = true;
+                        for (const lecturer of parsedJson) {
+                            if (
+                                !lecturer.lecturer_id ||
+                                !lecturer.name ||
+                                !lecturer.email ||
+                                !lecturer.contact_number
+                            ) {
+                                isValid = false;
+                                break;
+                            }
                         }
-                    }
 
-                    if (isValid) {
-                        setJsonContent(parsedJson);
-                        toast({
-                            title: "Success",
-                            description: "JSON file parsed successfully.",
-                            status: "success",
-                            duration: 3000,
-                            isClosable: true,
-                        });
-                        onOpenJsonModal();
-                    }else {
+                        if (isValid) {
+                            setJsonContent(parsedJson);
+                            toast({
+                                title: "Success",
+                                description: "JSON file parsed successfully.",
+                                status: "success",
+                                duration: 3000,
+                                isClosable: true,
+                            });
+                            onOpenJsonModal();
+                        } else {
+                            toast({
+                                title: "Invalid JSON Format",
+                                description: "Each lecturer must contain the required fields: name, email, password, lecturer_id, profile_picture, contact_number",
+                                status: "error",
+                                duration: 3000,
+                                isClosable: true,
+                            });
+                        }
+                    } else {
                         toast({
                             title: "Invalid JSON Format",
-                            description: "Each lecturer must contain the required fields: name, email, password, lecturer_id, profile_picture, contact_number",
+                            description: "The JSON must be an array.",
                             status: "error",
                             duration: 3000,
                             isClosable: true,
                         });
                     }
-                } else {
+                } catch (error) {
                     toast({
-                        title: "Invalid JSON Format",
-                        description: "The JSON must be an array.",
+                        title: "Error Parsing JSON",
+                        description: "Invalid JSON file.",
                         status: "error",
                         duration: 3000,
                         isClosable: true,
                     });
                 }
-                } catch (error) {
-                toast({
-                    title: "Error Parsing JSON",
-                    description: "Invalid JSON file.",
-                    status: "error",
-                    duration: 3000,
-                    isClosable: true,
-                });
-                }
             };
             reader.readAsText(file);
-            } else {
+        } else {
             toast({
                 title: "Invalid File Type",
                 description: "Please upload a valid JSON file.",
@@ -208,102 +213,103 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
             profile_picture: lecturer.lecturerPicture,
             joined_date: new Date().toISOString(),
         })
-        .then((response) => {
-            const data = response.data;
-            if (data.message === 'User registered successfully') {
-                const templateParams = {
-                    email_from: lecturer.lecturerEmail,
-                    code: lecturer.lecturerTempPass,
-                }
-                emailjs.send('service_x26hy6f', 'template_gx2dcde', templateParams, 'E81H8nhBjCZOjEuq3')
-                    .then((result) => {
-                        toast({
-                            title: 'Success',
-                            position: 'top-right',
-                            description: `${lecturer.lecturerName} registered successfully  an email has been sent to their personal email.`,
-                            status: 'success',
-                            duration: 1000,
-                            isClosable: true,
-                        });
-                    }, (error) => {
-                        toast({
-                            title: 'Error',
-                            position: 'top-right',
-                            description: data.message || 'An error occurred. Please try again.',
-                            status: 'error',
-                            duration: 1000,
-                            isClosable: true,
-                        });
+            .then((response) => {
+                const data = response.data;
+                if (data.message === 'User registered successfully') {
+                    const templateParams = {
+                        email_from: lecturer.lecturerEmail,
+                        code: lecturer.lecturerTempPass,
                     }
-                );
-                toast({
-                    title: 'Success',
-                    position: 'top-right',
-                    description: `Lecturer ${lecturer.lecturerName} registered successfully`,
-                    status: 'success',
-                    duration: 3000,
-                    isClosable: true,
-                });
-                setLecturer({
-                    lecturerId: '',
-                    lecturerName: '',
-                    lecturerEmail: '',
-                    lecturerTempPass: '',
-                    lecturerPicture: null,
-                    contact_number: '',
-                });
-                onClose();
-                onRefresh();
-            } else {
+                    emailjs.send('service_x26hy6f', 'template_gx2dcde', templateParams, 'E81H8nhBjCZOjEuq3')
+                        .then((result) => {
+                            toast({
+                                title: 'Success',
+                                position: 'top-right',
+                                description: `${lecturer.lecturerName} registered successfully  an email has been sent to their personal email.`,
+                                status: 'success',
+                                duration: 1000,
+                                isClosable: true,
+                            });
+                        }, (error) => {
+                            toast({
+                                title: 'Error',
+                                position: 'top-right',
+                                description: data.message || 'An error occurred. Please try again.',
+                                status: 'error',
+                                duration: 1000,
+                                isClosable: true,
+                            });
+                        }
+                        );
+                    toast({
+                        title: 'Success',
+                        position: 'top-right',
+                        description: `Lecturer ${lecturer.lecturerName} registered successfully`,
+                        status: 'success',
+                        duration: 3000,
+                        isClosable: true,
+                    });
+                    setLecturer({
+                        lecturerId: '',
+                        lecturerName: '',
+                        lecturerEmail: '',
+                        lecturerTempPass: '',
+                        lecturerPicture: null,
+                        contact_number: '',
+                    });
+                    onClose();
+                    onRefresh();
+                } else {
+                    toast({
+                        title: 'Error',
+                        position: 'top-right',
+                        description: data.message || 'Failed to register lecturer',
+                        status: 'error',
+                        duration: 3000,
+                        isClosable: true,
+                    });
+                }
+            })
+            .catch((error) => {
+                const errorMessage = error.response?.data?.message || error.message || 'Failed to register lecturer';
+
+                console.error('Registration error:', errorMessage);
                 toast({
                     title: 'Error',
                     position: 'top-right',
-                    description: data.message || 'Failed to register lecturer',
+                    description: `${errorMessage}`,
                     status: 'error',
                     duration: 3000,
                     isClosable: true,
                 });
-            }
-        })
-        .catch((error) => {
-            const errorMessage = error.response?.data?.message || error.message || 'Failed to register lecturer';
-    
-            console.error('Registration error:', errorMessage);
-            toast({
-                title: 'Error',
-                position: 'top-right',
-                description: `${errorMessage}`,
-                status: 'error',
-                duration: 3000,
-                isClosable: true,
             });
-        });
     }
     const onLecturerCreated = async () => {
+        setLoading(true);
+        const successLecturers = [];
+        const errorLecturers = [];
+
         for (const lecturer of jsonContent) {
             const {
                 name, email, password, contact_number, profile_picture, lecturer_id
             } = lecturer;
-    
+            const pass = password || 'uni10pass!';
             try {
                 const response = await axios.post('http://localhost:5000/register-lecturer', {
                     name,
                     email,
-                    password,
+                    password: pass,
                     contact_number,
                     profile_picture,
                     lecturer_id,
                 });
-    
                 if (response.status === 201) {
-                    toast({
-                        title: 'Success',
-                        position: 'top-right',
-                        description: `Lecturer ${name} successfully registered`,
-                        status: 'success',
-                        duration: 2000,
-                        isClosable: true,
-                    });
+                    successLecturers.push(name);
+                } else {
+                    errorLecturers.push({ name, error: response.data.error || 'Unknown error' });
+                }
+                if (response.status === 201) {
+
                 } else {
                     toast({
                         title: 'Error',
@@ -323,13 +329,38 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
                     duration: 2000,
                     isClosable: true,
                 });
+            } finally {
+                setLoading(false);
             }
         }
-    
+        if (successLecturers.length > 0) {
+            toast({
+                title: 'Success',
+                position: 'top-right',
+                description: `${successLecturers.length} lecturers successfully registered`,
+                status: 'success',
+                duration: 1000,
+                isClosable: true,
+            });
+        }
+        if (errorLecturers.length > 0) {
+            const errorDetails = errorLecturers
+                .map(({ name, error }) => `${name}: ${error}`)
+                .join(', ');
+            toast({
+                title: 'Error',
+                position: 'top-right',
+                description: `Error registering lecturer ${errorLecturers.length}: ${errorDetails}`,
+                status: 'error',
+                duration: 1000,
+                isClosable: true,
+            });
+        }
+
         onRefresh();
         onClose();
     };
-    
+
     return (
         <Flex alignItems="center" justifyContent="center">
             <FormControl as="form" padding="10px" borderRadius="20px" onSubmit={handleSubmit}>
@@ -403,7 +434,7 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
                     value={lecturer.lecturerTempPass}
                     onChange={handleChange}
                 />
-                
+
                 <Flex mt={4} width="100%" justifyContent='space-between'>
                     <Tooltip isDisabled={isDisabled} label="Parse JSON" fontSize="md">
                         <Button
@@ -412,52 +443,52 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
                             onClick={() => fileInputRef.current.click()}
                             position="relative"
                         >
-                        <AttachmentIcon ml={1} mr={1} />
-                        Parse JSON
+                            <AttachmentIcon ml={1} mr={1} />
+                            Parse JSON
                         </Button>
                     </Tooltip>
                     <Popover placement="top-end">
                         <PopoverTrigger>
-                        <Box
-                            position="absolute"
-                            bottom="45px"
-                            left="150px"
-                            display="inline-block"
-                            cursor="pointer"
-                        >
-                            <FaQuestionCircle fontSize="12px"/>
-                        </Box>
+                            <Box
+                                position="absolute"
+                                bottom="45px"
+                                left="150px"
+                                display="inline-block"
+                                cursor="pointer"
+                            >
+                                <FaQuestionCircle fontSize="12px" />
+                            </Box>
                         </PopoverTrigger>
                         <PopoverContent>
-                        <PopoverArrow />
-                        <PopoverCloseButton />
-                        <PopoverHeader>What is Parse JSON?</PopoverHeader>
-                        <PopoverBody
-                            textAlign="left"
-                            maxHeight="400px"
-                            overflowY="auto"
-                            padding="16px"
-                            userSelect="text"
-                        >
-                            <Image src={info} alt="Info Image" mb={4} />
-                            <Text mb={4} color="black" fontSize="sm">
-                            Parsing JSON refers to the process of converting a JSON (JavaScript Object Notation) string into a JavaScript object that can be used in your code. It's like decoding the JSON data so that it can be accessed and manipulated by your program.
-                            </Text>
-                            <Text fontWeight="bold" mb={2} color="black">
-                            Example:
-                            </Text>
-                            <Code
-                                color="black"
-                                fontSize="0.5rem"
-                                borderRadius="5px"
-                                padding="10px"
-                                backgroundColor="f8f9fa"
-                                whiteSpace="pre-wrap"
-                                overflowX="auto"
+                            <PopoverArrow />
+                            <PopoverCloseButton />
+                            <PopoverHeader>What is Parse JSON?</PopoverHeader>
+                            <PopoverBody
+                                textAlign="left"
+                                maxHeight="400px"
+                                overflowY="auto"
+                                padding="16px"
+                                userSelect="text"
                             >
-                            {jsonInfo}
-                            </Code>
-                        </PopoverBody>
+                                <Image src={info} alt="Info Image" mb={4} />
+                                <Text mb={4} color="black" fontSize="sm">
+                                    Parsing JSON refers to the process of converting a JSON (JavaScript Object Notation) string into a JavaScript object that can be used in your code. It's like decoding the JSON data so that it can be accessed and manipulated by your program.
+                                </Text>
+                                <Text fontWeight="bold" mb={2} color="black">
+                                    Example:
+                                </Text>
+                                <Code
+                                    color="black"
+                                    fontSize="0.5rem"
+                                    borderRadius="5px"
+                                    padding="10px"
+                                    backgroundColor="f8f9fa"
+                                    whiteSpace="pre-wrap"
+                                    overflowX="auto"
+                                >
+                                    {jsonInfo}
+                                </Code>
+                            </PopoverBody>
                         </PopoverContent>
                     </Popover>
                     <Input
@@ -469,7 +500,7 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
                     />
                     <Tooltip isDisabled={isDisabled} label='Create' fontSize='md'>
                         <Button colorScheme='teal' width="35%" type="submit">
-                            <CheckIcon ml={1} mr={1}/>Create
+                            <CheckIcon ml={1} mr={1} />Create
                         </Button>
                     </Tooltip>
                 </Flex>
@@ -479,49 +510,49 @@ const AddNewLecturer = ({ isDisabled, onClose, onRefresh }) => {
                 <ModalContent>
                     <ModalHeader>Parsed Lecturers</ModalHeader>
                     <ModalCloseButton />
-                    <ModalBody>
+                    <ModalBody maxHeight="60vh" overflowY="auto">
                         {jsonContent.map((json, index) => (
                             <Box key={index} mb={4}>
-                            <Flex justifyContent="center">
-                                <Avatar
-                                    mb={3}
-                                    size="lg"
-                                    src={
-                                        json.profile_picture ||
-                                        'https://static.vecteezy.com/system/resources/thumbnails/004/141/669/small/no-photo-or-blank-image-icon-loading-images-or-missing-image-mark-image-not-available-or-image-coming-soon-sign-simple-nature-silhouette-in-frame-isolated-illustration-vector.jpg'
-                                    }
-                                />
-                            </Flex>
-                            <Divider mb={2} />
-                            <Table size="sm" variant="striped" colorScheme="gray">
-                                <Tbody>
-                                    {[
-                                        { label: 'Name', value: json.name },
-                                        { label: 'Email', value: json.email },
-                                        { label: 'Lecturer ID', value: json.lecturer_id },
-                                        { label: 'Password', value: json.password },
-                                        { label: 'Contact Number', value: json.contact_number },
-                                    ].map((field, fieldIndex) => (
-                                        <Tr key={fieldIndex}>
-                                            <Th padding='3px' fontSize="10px" fontWeight="bold" textAlign="left" width="40%">
-                                                {field.label}
-                                            </Th>
-                                            <Td padding='3px' fontSize="10px" textAlign="left">
-                                                {field.value}
-                                            </Td>
-                                        </Tr>
-                                    ))}
-                                </Tbody>
-                            </Table>
-                        </Box>
-                        
+                                <Flex justifyContent="center">
+                                    <Avatar
+                                        mb={3}
+                                        size="lg"
+                                        src={
+                                            json.profile_picture ||
+                                            'https://static.vecteezy.com/system/resources/thumbnails/004/141/669/small/no-photo-or-blank-image-icon-loading-images-or-missing-image-mark-image-not-available-or-image-coming-soon-sign-simple-nature-silhouette-in-frame-isolated-illustration-vector.jpg'
+                                        }
+                                    />
+                                </Flex>
+                                <Divider mb={2} />
+                                <Table size="sm" variant="striped" colorScheme="gray">
+                                    <Tbody>
+                                        {[
+                                            { label: 'Name', value: json.name },
+                                            { label: 'Email', value: json.email },
+                                            { label: 'Lecturer ID', value: json.lecturer_id },
+                                            { label: 'Password', value: json.password },
+                                            { label: 'Contact Number', value: json.contact_number },
+                                        ].map((field, fieldIndex) => (
+                                            <Tr key={fieldIndex}>
+                                                <Th padding='3px' fontSize="10px" fontWeight="bold" textAlign="left" width="40%">
+                                                    {field.label}
+                                                </Th>
+                                                <Td padding='3px' fontSize="10px" textAlign="left">
+                                                    {field.value}
+                                                </Td>
+                                            </Tr>
+                                        ))}
+                                    </Tbody>
+                                </Table>
+                            </Box>
+
                         ))}
                     </ModalBody>
-                    <ModalFooter>
-                        <Button colorScheme="blue" onClick={onCloseJsonModal}>
+                    <ModalFooter display='flex' justifyContent='space-between'>
+                        <Button width='25%' colorScheme="red" onClick={onCloseJsonModal}>
                             Close
                         </Button>
-                        <Button variant="ghost" onClick={onLecturerCreated}>
+                        <Button width='25%' colorScheme="blue" onClick={onLecturerCreated}>
                             Submit
                         </Button>
                     </ModalFooter>

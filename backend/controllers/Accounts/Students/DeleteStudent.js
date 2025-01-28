@@ -23,14 +23,17 @@ const handleDeleteStudent = (database) => async (req, res) => {
         // Delete the file if exists
         if (facialPath) {
             const fullPath = path.resolve('uploads', facialPath);
-            console.log(fullPath);
-            try {
-                fs.unlinkSync(fullPath);  
-                console.log(`File deleted: ${fullPath}`);
-            } catch (err) {
-                console.error(`Error deleting file: ${err.message}`);
-                await trx.rollback();
-                return res.status(500).json({ error: 'Failed to delete associated file.' });
+            if (fs.existsSync(fullPath)) {
+                try {
+                    fs.unlinkSync(fullPath);
+                    console.log(`File deleted: ${fullPath}`);
+                } catch (err) {
+                    console.error(`Error deleting file: ${err.message}`);
+                    await trx.rollback();
+                    return res.status(500).json({ error: 'Failed to delete associated file.' });
+                }
+            } else {
+                console.log(`File not found, skipping deletion: ${fullPath}`);
             }
         }
 

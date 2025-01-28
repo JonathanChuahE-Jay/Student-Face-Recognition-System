@@ -21,13 +21,22 @@ import {
   MenuList,
   Button,
   IconButton,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverHeader,
+  PopoverBody,
+  Checkbox,
 } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import axios from "axios";
 import Pie_Chart from "../PieChart/Pie_Chart";
 import Excel from "../FileExport/Excel";
+import { FaFilter } from "react-icons/fa";
 
-const DailyReport = ({searchQuery}) => {
+const DailyReport = ({ searchQuery }) => {
   const [date, setDate] = useState("");
   const [data, setData] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -35,9 +44,9 @@ const DailyReport = ({searchQuery}) => {
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState('');
   const [dateDay, setDateDay] = useState('');
-
+  const [isDisplayTodayAvailableSubjects, setIsDisplayTodayAvailableSubjects] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [subjectsPerPage] = useState(10); 
+  const [subjectsPerPage] = useState(10);
 
   const bgColor = useColorModeValue("gray.100", "gray.800");
   const cardBgColor = useColorModeValue("white", "gray.700");
@@ -46,32 +55,32 @@ const DailyReport = ({searchQuery}) => {
   const handleDateChange = (e) => {
     setDate(e.target.value);
   };
-  
+
   const fetchDailyReport = async () => {
     const formattedDate = date ? new Date(date).toISOString().split("T")[0] : null;
-  
+
     if (!formattedDate) {
       setError("Invalid date selected.");
       return;
     }
-  
+
     try {
       const response = await axios.post("http://localhost:5000/display-daily-report", { date: formattedDate });
       const reportData = response.data.result;
       const subjectsWithSections = response.data.subjectsWithSectionsAndLecturers;
-  
+
       setSubjects(subjectsWithSections);
-      setData(reportData || []); 
-  
+      setData(reportData || []);
+
       const presentCount = reportData?.filter((d) => d.status === "Present").length || 0;
       const absentCount = reportData?.filter((d) => d.status === "Absent").length || 0;
       const excusedCount = reportData?.filter((d) => d.status === "Excused").length || 0;
-  
+
       setCounts({ Present: presentCount, Absent: absentCount, Excused: excusedCount });
-      setError(null); 
+      setError(null);
     } catch (error) {
       console.error("Error fetching report:", error);
-      setSubjects([]); 
+      setSubjects([]);
       setData([]);
       setCounts({ Present: 0, Absent: 0, Excused: 0 });
       setError(
@@ -81,7 +90,7 @@ const DailyReport = ({searchQuery}) => {
       );
     }
   };
-  
+
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     setDate(today);
@@ -110,21 +119,31 @@ const DailyReport = ({searchQuery}) => {
     return dateObj.toLocaleTimeString();
   };
 
-  const filteredSubjects = searchQuery 
-  ? subjects.filter(subject =>
+  const filteredSubjects = subjects
+  .filter(subject => {
+    if (!isDisplayTodayAvailableSubjects) return true;
+    return (
+      subject.sections &&
+      subject.sections.some(section => Number(section.totalStudentsCurrentDay) > 0)
+    );
+  })
+  .filter(subject => {
+    if (!searchQuery) return true;
+    return (
       subject.name && subject.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  : subjects;
+    ); 
+  });
+
 
   const filteredData = searchQuery
-  ? data.filter(item => 
+    ? data.filter(item =>
       (item.subject_name && item.subject_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (item.subject_code && item.subject_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (item.student_name && item.student_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (item.section_number && `Section: ${item.section_number}`.toString().toLowerCase().includes(searchQuery.toLowerCase()))||
+      (item.section_number && `Section: ${item.section_number}`.toString().toLowerCase().includes(searchQuery.toLowerCase())) ||
       (item.status.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
-  : data;
+    )
+    : data;
 
   const paginatedData = filteredSubjects.slice(
     (currentPage - 1) * subjectsPerPage,
@@ -158,7 +177,7 @@ const DailyReport = ({searchQuery}) => {
     const dateObj = new Date(date);
     setDateDay(days[dateObj.getDay()]);
   };
-
+  
   return (
     <Flex direction="column" align="center" justify="center" minH="100vh" p={4} bg={bgColor}>
       <Box width="full" maxW="1200px" p={6} bg={cardBgColor} borderRadius="md" shadow="md">
@@ -183,7 +202,28 @@ const DailyReport = ({searchQuery}) => {
         <Flex mb={4}>
           <FormControl>
             <FormLabel>Date: </FormLabel>
-            <Input type="date" value={date} onChange={handleDateChange} />
+            <Flex>
+              <Input type="date" value={date} onChange={handleDateChange} />
+              <Popover>
+                <PopoverTrigger>
+                  <IconButton ml={5} icon={<FaFilter />} />
+                </PopoverTrigger>
+                <PopoverContent>
+                  <PopoverArrow />
+                  <PopoverCloseButton />
+                  <PopoverHeader>Confirmation!</PopoverHeader>
+                  <PopoverBody>
+                  <Checkbox
+                    isChecked={isDisplayTodayAvailableSubjects}
+                    onChange={(e) => setIsDisplayTodayAvailableSubjects(e.target.checked)}
+                  >
+                    Display today's subjects
+                  </Checkbox>
+
+                  </PopoverBody>
+                </PopoverContent>
+              </Popover>
+            </Flex>
           </FormControl>
         </Flex>
         <Table size="sm">
@@ -201,39 +241,40 @@ const DailyReport = ({searchQuery}) => {
             </Tr>
           </Thead>
           <Tbody>
-            {subjects? (
+            {subjects.length > 0 ? (
+              paginatedData.length > 0? 
               paginatedData.map((subject, index) => {
                 const attendedSections = subject.sections
                   ? subject.sections.map((section) => Number(section.totalAttendance) || 0)
                   : [];
                 const totalStudents = subject.sections
                   ? subject.sections.reduce(
-                      (total, section) => total + Number(section.totalStudents || 0),
-                      0
-                    )
-                  : 0;
-                const totalStudentsActualDay = subject.sections
-                ? subject.sections.reduce(
-                    (total, section) => total + Number(section.totalStudentsCurrentDay|| 0),
+                    (total, section) => total + Number(section.totalStudents || 0),
                     0
                   )
-                : 0;
+                  : 0;
+                const totalStudentsActualDay = subject.sections
+                  ? subject.sections.reduce(
+                    (total, section) => total + Number(section.totalStudentsCurrentDay || 0),
+                    0
+                  )
+                  : 0;
                 const totalLecturer = subject.sections
                   ? subject.sections.reduce(
-                      (total, section) => total + (section.lecturer ? 1 : 0),
-                      0
-                    )
+                    (total, section) => total + (section.lecturer ? 1 : 0),
+                    0
+                  )
                   : 0;
 
                 const attended = attendedSections.length > 0
                   ? attendedSections.reduce((total, attendance) => total + attendance, 0)
                   : 0;
 
-                const overallAttendedPercentage = totalStudents  > 0
+                const overallAttendedPercentage = totalStudents > 0
                   ? ((attended / totalStudents) * 100).toFixed(2)
                   : "0.00";
 
-                const todayAttendedPercentage = totalStudentsActualDay  > 0
+                const todayAttendedPercentage = totalStudentsActualDay > 0
                   ? ((attended / totalStudentsActualDay) * 100).toFixed(2)
                   : "0.00";
 
@@ -251,10 +292,16 @@ const DailyReport = ({searchQuery}) => {
                   </Tr>
                 );
               })
+              :
+              <Tr>
+                <Td colSpan="9" textAlign='center'>
+                  <Text>{error ? error : "No data available for the selected date."}</Text>
+                </Td>
+              </Tr>
             ) : (
               <Tr>
-                <Td colSpan="7">
-                  <Text color="red.500">{error ? error : "No data available for the selected date."}</Text>
+                <Td colSpan="9" textAlign='center'>
+                  <Text>{error ? error : "No subjects available"}</Text>
                 </Td>
               </Tr>
             )}
@@ -328,7 +375,7 @@ const DailyReport = ({searchQuery}) => {
             <Heading textAlign='center' as="h3" size="md" mb={4} color={textColor}>
               Attendance Summary
             </Heading>
-            {data.length > 0 ? <Pie_Chart data={{ counts }} /> : <Text>No data available for the selected date.</Text>}
+            {data.length > 0 ? <Pie_Chart data={{ counts }} /> : <Text textAlign='center'>No data available for the selected date.</Text>}
           </Box>
           <Box bg={cardBgColor} p={4} borderRadius="md" shadow="md" overflow="auto" height="80vh">
             <Heading textAlign='center' as="h3" size="md" mb={4} color={textColor}>
@@ -349,8 +396,8 @@ const DailyReport = ({searchQuery}) => {
               <Tbody>
                 {error ? (
                   <Tr>
-                    <Td colSpan="6">
-                      <Text color="red.500">{error}</Text>
+                    <Td colSpan="6" textAlign='center'>
+                      <Text>{error}</Text>
                     </Td>
                   </Tr>
                 ) : (
@@ -363,7 +410,7 @@ const DailyReport = ({searchQuery}) => {
                         <Td padding="5px">{row.student_name}</Td>
                         <Td padding="5px">{row.status}</Td>
                         <Td padding="5px" style={{ whiteSpace: "nowrap" }}>
-                          Section: {row.section_number?row.section_number:'Null'}
+                          Section: {row.section_number ? row.section_number : 'Null'}
                         </Td>
                         <Td padding="5px">{formatTime(row.date)}</Td>
                       </Tr>
@@ -371,7 +418,7 @@ const DailyReport = ({searchQuery}) => {
                   ) : (
                     <Tr>
                       <Td colSpan="7">
-                        <Text color="red.500">{error ? error : "No data available for the selected date."}</Text>
+                        <Text textAlign='center'>{error ? error : "No data available for the selected date."}</Text>
                       </Td>
                     </Tr>
                   )

@@ -27,10 +27,19 @@ import {
     AlertDialogBody,
     AlertDialogFooter,
     useDisclosure,
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+    PopoverArrow,
+    PopoverCloseButton,
+    PopoverHeader,
+    PopoverBody,
+    Checkbox,
 } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { CheckIcon, Search2Icon, ChevronLeftIcon, ChevronRightIcon, InfoIcon } from "@chakra-ui/icons";
 import axios from 'axios';
+import { FaFilter } from "react-icons/fa";
 
 const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled, studentId, onRefresh, onClose }) => {
     const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -43,7 +52,9 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
     const [itemsPerPage] = useState(6);
     const [loading, setLoading] = useState(true);
     const [sectionChangeData, setSectionChangeData] = useState({ subjectId: null, sectionNumber: null });
-
+    const [showDisabled, setShowDisabled] = useState(false);
+    const [showCurrentSemester, setShowCurrentSemester] = useState(true); 
+    
     const toast = useToast();
     const cancelRef = useRef()
 
@@ -235,11 +246,35 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
         });
     }        
 
-    const filteredData = data.filter(subject =>
-        subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        subject.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (subject.section && subject.section.toLowerCase().includes(searchQuery.toLowerCase()))
+    const filteredData = data
+    .filter(subject => {
+        const currentYear = year?.toString() || '';
+        const currentSemester = semester?.toString() || '';
+
+        if (!showDisabled) {
+            const isSubjectDisabled = allStudentSubjects.some(
+                assignedSubject =>
+                    assignedSubject.subject_id === subject.id &&
+                    (assignedSubject.year?.toString() !== currentYear ||
+                        assignedSubject.semester?.toString() !== currentSemester)
+            );
+            if (isSubjectDisabled) return false;
+        }
+
+        if (showCurrentSemester) {
+            return (
+                selectedSubjects.includes(subject.id)
+            );
+        }
+
+        return true; 
+    })
+    .filter(subject =>
+        subject.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        subject.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        subject.section?.toLowerCase()?.includes(searchQuery.toLowerCase())
     );
+
 
     useEffect(() => {
         setCurrentPage(1);
@@ -270,25 +305,64 @@ const Assign_Student_Subject = ({ allStudentSubjects, year, semester, isDisabled
 
     return (
         <Flex flexDirection='column'>
-            {/* Search Input */}
-            <InputGroup>
-                <Input 
-                    variant='flushed' 
-                    placeholder="Search" 
-                    marginBottom='20px' 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <InputLeftElement>
-                    <Search2Icon />
-                </InputLeftElement>
-                <InputRightElement>
-                    <Tooltip isDisabled={isDisabled} label='Clear Search Bar' fontSize='md'>
-                        <CloseButton onClick={() => setSearchQuery('')} />
-                    </Tooltip>
-                </InputRightElement>
-            </InputGroup>
-
+            <Flex>
+                {/* Search Input */}
+                <InputGroup>
+                    <Input 
+                        variant='flushed' 
+                        placeholder="Search" 
+                        marginBottom='20px' 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <InputLeftElement>
+                        <Search2Icon />
+                    </InputLeftElement>
+                    <InputRightElement>
+                        <Tooltip isDisabled={isDisabled} label='Clear Search Bar' fontSize='md'>
+                            <CloseButton onClick={() => setSearchQuery('')} />
+                        </Tooltip>
+                    </InputRightElement>
+                </InputGroup>
+                <Popover>
+                    <PopoverTrigger>
+                        <IconButton
+                            icon={<FaFilter />}
+                            ml={5}
+                            aria-label="Filter subjects"
+                        />
+                    </PopoverTrigger>
+                    <PopoverContent>
+                        <PopoverArrow />
+                        <PopoverCloseButton />
+                        <PopoverHeader>Filter Options</PopoverHeader>
+                        <PopoverBody>
+                            <Checkbox
+                                isChecked={showDisabled}
+                                onChange={e => setShowDisabled(e.target.checked)}
+                            >
+                                Show Disabled Subjects
+                            </Checkbox>
+                            <Checkbox
+                                isChecked={showCurrentSemester}
+                                onChange={e => setShowCurrentSemester(e.target.checked)}
+                                mt={2}
+                            >
+                                Show Current Semester Subjects Only
+                            </Checkbox>
+                            <Button
+                                colorScheme="blue"
+                                size="sm"
+                                mt={4}
+                                onClick={() => setCurrentPage(1)} 
+                            >
+                                Apply Filters
+                            </Button>
+                        </PopoverBody>
+                    </PopoverContent>
+                </Popover>
+            </Flex>
+            
             {loading ? (
                 <Text>Loading subjects...</Text>
             ) : filteredData.length === 0 ? (

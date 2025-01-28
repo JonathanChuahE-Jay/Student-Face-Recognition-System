@@ -26,6 +26,9 @@ import {
     ModalCloseButton,
     ModalContent,
     ModalBody,
+    Box,
+    ModalFooter,
+    Image,
 } from '@chakra-ui/react';
 import { CheckIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import imageCompression from 'browser-image-compression';
@@ -42,14 +45,19 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
     const [studentProfilePicture, setStudentProfilePicture] = useState(student.profile_picture || null);
     const [filteredCourses, setFilteredCourses] = useState([]);
     const [courses, setCourses] = useState([]);
-    const [programme, setProgramme] =useState('');
+    const [programme, setProgramme] = useState('');
     const [totalCurrentIntakeYear, setTotalCurrentIntakeYear] = useState('');
     const [totalCurrentIntakeSemester, setTotalCurrentIntakeSemester] = useState('');
-    const [currentIntakeYear, setCurrentIntakeYear]= useState(student.current_year ||'');
-    const [currentIntakeSemester, setCurrentIntakeSemester]= useState(student.current_semester||'');
-    
+    const [currentIntakeYear, setCurrentIntakeYear] = useState(student.current_year || '');
+    const [currentIntakeSemester, setCurrentIntakeSemester] = useState(student.current_semester || '');
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
+
     const { isOpen: isOpenFaceCaptureModal, onOpen: onOpenFaceCaptureModal, onClose: onCloseFaceCaptureModal } = useDisclosure();
     const { isOpen: isOpenDeleteModal, onOpen: onOpenDeleteModal, onClose: onCloseDeleteModal } = useDisclosure();
+    const { isOpen: isOpenPreviewAlert, onOpen: onOpenPreviewAlert, onClose: onClosePreviewAlert } = useDisclosure();
+    const { isOpen: isOpenPhotoCaptureModal, onOpen: onOpenPhotoCaptureModal, onClose: onClosePhotoCaptureModal } = useDisclosure();
+    const { isOpen: isOpenFaceAlert, onOpen: onOpenFaceAlert, onClose: onCloseFaceAlert } = useDisclosure();
 
     const toast = useToast();
     const Ref = useRef();
@@ -57,7 +65,7 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
     useEffect(() => {
         axios.get('/show-all-courses')
             .then(response => {
-                setCourses(response.data);  
+                setCourses(response.data);
             })
             .catch(error => {
                 console.error('Error fetching student courses:', error);
@@ -71,14 +79,14 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                 });
             });
     }, []);
-    
+
     useEffect(() => {
         if (!student.prefix) {
             const alphabets = student.student_id.match(/[A-Za-z]+/)[0];
-            const numbers = student.student_id.match(/\d+/)[0]; 
+            const numbers = student.student_id.match(/\d+/)[0];
             setStudentId(numbers);
             setSelectedOption(alphabets);
-        }else{
+        } else {
             setStudentId(student.student_id.replace(/[A-Za-z]/g, ''));
             setSelectedOption(student.prefix);
         }
@@ -109,7 +117,7 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
             setFilteredCourses(courses);
         }
     }, [programme, courses]);
-    
+
 
     const handleProfilePicture = async (e) => {
         const file = e.target.files[0];
@@ -168,7 +176,7 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
             });
 
             const { message, error } = response.data;
-            
+
             if (error) {
                 toast({
                     title: 'Error',
@@ -201,6 +209,52 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                 duration: 1000,
                 isClosable: true,
             });
+        }
+    };
+
+    const saveImage = async () => {
+        if (selectedFile) {
+            const formData = new FormData();
+            formData.append("image", selectedFile, `${student.name}.jpg`);
+            formData.append("user_id", student.user_id);
+
+            try {
+                const response = await axios.post("http://localhost:5000/upload", formData, {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                });
+                toast({
+                    position: "top-right",
+                    title: "Success",
+                    description: response.data.message || "Image uploaded successfully.",
+                    status: "success",
+                    duration: 1000,
+                    isClosable: true,
+                });
+                onClosePreviewAlert()
+            } catch (error) {
+                const errorMessage =
+                    error.response?.data?.error || error.message || "An error occurred. Please try again.";
+                console.error("Error uploading image:", error);
+                toast({
+                    position: "top-right",
+                    title: "Error",
+                    description: errorMessage,
+                    status: "error",
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+        }
+        onClose();
+    };
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            onOpenPreviewAlert();
+            setSelectedFile(file);
+            setPreviewImage(URL.createObjectURL(file));
         }
     };
 
@@ -256,8 +310,8 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
         <Flex alignItems="center" justifyContent="center">
             <FormControl as="form" padding="20px" borderRadius="20px" onSubmit={handleSubmit}>
                 <Flex justifyContent="center">
-                    <Avatar 
-                        size="2xl" 
+                    <Avatar
+                        size="2xl"
                         src={studentProfilePicture || 'https://static.vecteezy.com/system/resources/thumbnails/004/141/669/small/no-photo-or-blank-image-icon-loading-images-or-missing-image-mark-image-not-available-or-image-coming-soon-sign-simple-nature-silhouette-in-frame-isolated-illustration-vector.jpg'}
                         alt="Student Profile Picture"
                     >
@@ -277,7 +331,7 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                     </Avatar>
                 </Flex>
                 <FormLabel marginTop={'10px'}>Programme:</FormLabel>
-                <Select value={programme} onChange={(e)=>{setProgramme(e.target.value)}} required>
+                <Select value={programme} onChange={(e) => { setProgramme(e.target.value) }} required>
                     <option value=''>Select a programme</option>
                     <option value='Foundation'>Foundation</option>
                     <option value='Bachelor'>Bachelor</option>
@@ -291,10 +345,10 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                         <option value="">Select a program</option>
                         {
                             filteredCourses.map((course, index) => (
-                            <option key={index} value={course.course_code}>
-                                {course.course_code} ({course.course_name})
-                            </option>
-                        ))}
+                                <option key={index} value={course.course_code}>
+                                    {course.course_code} ({course.course_name})
+                                </option>
+                            ))}
                     </Select>
                     <Input
                         type='number'
@@ -351,37 +405,81 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                 <Flex marginTop="15px" justifyContent="space-between">
                     <Tooltip isDisabled={isDisabled} label='Face Capture' fontSize='md'>
                         <Button width='33%' textAlign="center" colorScheme='blue' onClick={onOpenFaceCaptureModal}>
-                            <FaCamera/><Text ml={1} mr={1}>{faceCapture}</Text>
+                            <FaCamera /><Text ml={1} mr={1}>{faceCapture}</Text>
                         </Button>
                     </Tooltip>
                     <Tooltip isDisabled={isDisabled} label='Delete' fontSize='md'>
                         <Button width='33%' colorScheme="red" onClick={onOpenDeleteModal}>
-                            <DeleteIcon ml={1} mr={1}/> {deleteLabel}
+                            <DeleteIcon ml={1} mr={1} /> {deleteLabel}
                         </Button>
                     </Tooltip>
                     <Tooltip isDisabled={isDisabled} label='Update' fontSize='md'>
                         <Button width='33%' colorScheme="teal" type="submit">
-                            <CheckIcon ml={1} mr={1}/> {updateLabel}
+                            <CheckIcon ml={1} mr={1} /> {updateLabel}
                         </Button>
                     </Tooltip>
                 </Flex>
             </FormControl>
-            <Modal size='2xl' isOpen={isOpenFaceCaptureModal} onClose={onCloseFaceCaptureModal}>
-                <ModalOverlay/>
+            <Modal size='xl' isOpen={isOpenFaceCaptureModal} onClose={onCloseFaceCaptureModal}>
+                <ModalOverlay />
                 <ModalContent marginTop='20px'>
                     <ModalHeader>Face Capture</ModalHeader>
-                    <ModalCloseButton/>
+                    <ModalCloseButton />
                     <ModalBody padding='20px'>
                         {
-                            student.facial_path?
-                                <FaceDisplay isDisabled={isDisabled} onClose={onCloseFaceCaptureModal} createdUser={student}/>
-                            :
-                                <FaceCapture onClose={onCloseFaceCaptureModal} createdUser={student}/>
+                            student.facial_path ? (
+                                <FaceDisplay isDisabled={isDisabled} onClose={onCloseFaceCaptureModal} createdUser={student} />
+                            ) : (
+                                <Text>
+                                    Please upload a face for face recognition attedance taking
+                                </Text>
+                            )
                         }
+                    </ModalBody>
+
+                    {
+                        !student.facial_path && (
+                            <ModalFooter justifyContent='space-between'>
+                                <Button width='30%' colorScheme='red' onClick={() => {
+                                    onCloseFaceAlert()
+                                    onClose()
+                                }}>
+                                    Maybe Later
+                                </Button>
+                                <Box cursor='pointer'>
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        id="file-upload"
+                                        display="none"
+                                    />
+                                    <label htmlFor="file-upload" width='40%'>
+                                        <Button as="span" colorScheme="blue" >
+                                            Upload Photo
+                                        </Button>
+                                    </label>
+                                </Box>
+                                <Button ml={3} width='30%' colorScheme='green' onClick={() => {
+                                    onOpenPhotoCaptureModal()
+                                }} >
+                                    Capture Photo
+                                </Button>
+                            </ModalFooter>
+                        )
+                    }
+                </ModalContent>
+            </Modal>
+            <Modal size='2xl' isOpen={isOpenPhotoCaptureModal} onClose={onClosePhotoCaptureModal}>
+                <ModalOverlay />
+                <ModalContent marginTop='20px'>
+                    <ModalHeader>Face Capture</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody padding='20px'>
+                        <FaceCapture onClose={onClosePhotoCaptureModal} createdUser={student} />
                     </ModalBody>
                 </ModalContent>
             </Modal>
-            
             <AlertDialog
                 motionPreset='slideInBottom'
                 leastDestructiveRef={Ref}
@@ -389,11 +487,11 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                 isOpen={isOpenDeleteModal}
                 isCentered
             >
-                <AlertDialogOverlay/>
+                <AlertDialogOverlay />
                 <AlertDialogContent>
                     <AlertDialogHeader>Delete confirmation</AlertDialogHeader>
                     <Tooltip isDisabled={isDisabled} label='Close Dialog' fontSize='md'>
-                        <AlertDialogCloseButton/>
+                        <AlertDialogCloseButton />
                     </Tooltip>
                     <AlertDialogBody>
                         Are you sure you want to delete this {studentName}?
@@ -408,7 +506,31 @@ const Update_Student = ({ isDisabled, onRefresh, student, onClose }) => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </Flex>
+            <AlertDialog isOpen={isOpenPreviewAlert} onClose={onClosePreviewAlert} isCentered>
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                            Preview Image
+                        </AlertDialogHeader>
+
+                        <AlertDialogBody>
+                            <Image src={previewImage} alt="Preview" borderRadius="md" mb={4} />
+                        </AlertDialogBody>
+
+                        <AlertDialogFooter justifyContent="space-between">
+                            <Button width="30%" colorScheme="yellow" onClick={() => {
+                                onClosePreviewAlert()
+                            }}>
+                                Back
+                            </Button>
+                            <Button colorScheme="green" width="30%" onClick={saveImage}>
+                                Confirm
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
+        </Flex >
     );
 };
 

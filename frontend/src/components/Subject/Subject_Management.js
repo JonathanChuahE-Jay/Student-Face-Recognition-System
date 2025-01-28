@@ -33,14 +33,14 @@ import {
   Spinner
 } from "@chakra-ui/react";
 import { AddIcon, ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
-import {  useNavigate, useParams } from "react-router-dom";
-import { useTooltip } from '../../Context/ToolTipContext'; 
+import { useNavigate, useParams } from "react-router-dom";
+import { useTooltip } from '../../Context/ToolTipContext';
 import UpdateSubject from "./Update_Subject";
 import AddNewSubject from './Add_New_Subject';
 import SubjectList from "./Subject_List";
 import axios from 'axios';
 
-const SubjectManagement = ({searchQuery, user}) => {
+const SubjectManagement = ({ searchQuery, user }) => {
   const { isOpen: isOpenUpdateModal, onOpen: onOpenUpdateModal, onClose: onCloseUpdateModal } = useDisclosure();
   const { isOpen: isOpenAddNewSubject, onOpen: onOpenAddNewSubject, onClose: onCloseAddNewSubject } = useDisclosure();
   const { isOpen: isOpenDeleteModal, onOpen: onOpenDeleteModal, onClose: onCloseDeleteModal } = useDisclosure();
@@ -71,24 +71,24 @@ const SubjectManagement = ({searchQuery, user}) => {
 
   const fetchData = async () => {
     setIsLoading(true);
-  
+
     try {
       if (user.role === 'admin') {
         const [subjectsResponse, coursesResponse] = await Promise.all([
           axios.get("http://localhost:5000/show-all-subjects"),
           axios.get("http://localhost:5000/show-all-courses"),
         ]);
-  
+
         const sortedSubjects = subjectsResponse.data.sort((a, b) => a.id - b.id);
         setData(sortedSubjects);
         setFilteredData(sortedSubjects);
         setCourses(coursesResponse.data);
-  
+
       } else if (user.role === 'lecturer') {
         const response = await axios.get("http://localhost:5000/show-all-subjects", {
           params: { lecturer_id: user.id },
         });
-  
+
         const sortedSubjects = response.data.sort((a, b) => a.id - b.id);
         setData(sortedSubjects);
         setFilteredData(sortedSubjects);
@@ -96,7 +96,7 @@ const SubjectManagement = ({searchQuery, user}) => {
         const response = await axios.get("http://localhost:5000/show-all-subjects", {
           params: { student_id: user.id },
         });
-  
+
         const sortedSubjects = response.data.sort((a, b) => a.id - b.id);
         setData(sortedSubjects);
         setFilteredData(sortedSubjects);
@@ -115,11 +115,11 @@ const SubjectManagement = ({searchQuery, user}) => {
       setIsLoading(false);
     }
   };
-  
+
 
   useEffect(() => {
     fetchData();
-  },[]);
+  }, []);
 
   const handleUpdateSubject = (subject) => {
     setSelectedSubject(subject);
@@ -140,12 +140,12 @@ const SubjectManagement = ({searchQuery, user}) => {
 
   const handleMoreInfo = (subject) => {
     console.log(subject)
-    user.role === 'student'?
-    navigate(`/subject-student-info/${subject.name}`, { state: { subject } })
-    :
-    navigate(`/subject-info/${subject.name}`, { state: { subject } })
+    user.role === 'student' ?
+      navigate(`/subject-student-info/${subject.name}`, { state: { subject } })
+      :
+      navigate(`/subject-info/${subject.name}`, { state: { subject } })
   };
-  
+
 
   const handleDeleteSubject = () => {
     axios.post('http://localhost:5000/delete-subject', { id: subjectToDelete })
@@ -181,7 +181,7 @@ const SubjectManagement = ({searchQuery, user}) => {
           duration: 1000,
           isClosable: true,
         });
-      }).finally(()=>{
+      }).finally(() => {
         handleResetPage();
       })
   };
@@ -200,13 +200,13 @@ const SubjectManagement = ({searchQuery, user}) => {
     const ids = id.includes(',')
       ? id.split(',').map(num => parseInt(num.trim(), 10))
       : [parseInt(id, 10)];
-  
+
     if (checked) {
-      setSelectedCoursesSubjects(prevSubjects => 
+      setSelectedCoursesSubjects(prevSubjects =>
         [...new Set([...prevSubjects, ...ids])]
       );
     } else {
-      setSelectedCoursesSubjects(prevSubjects => 
+      setSelectedCoursesSubjects(prevSubjects =>
         prevSubjects.filter(subjectId => !ids.includes(subjectId))
       );
     }
@@ -238,7 +238,7 @@ const SubjectManagement = ({searchQuery, user}) => {
       );
       handleResetPage();
     }
-    
+
     setFilteredData(filtered);
   }, [searchQuery, filters, data, selectedCoursesSubjects]);
 
@@ -255,10 +255,10 @@ const SubjectManagement = ({searchQuery, user}) => {
 
   useEffect(() => {
     if (prevSearchQueryRef.current !== searchQuery) {
-        handleResetPage();
-        prevSearchQueryRef.current = searchQuery; 
+      handleResetPage();
+      prevSearchQueryRef.current = searchQuery;
     }
-}, [searchQuery]);
+  }, [searchQuery]);
 
   const paginatedData = filteredData.slice(
     (currentPage - 1) * subjectsPerPage,
@@ -288,10 +288,10 @@ const SubjectManagement = ({searchQuery, user}) => {
   }
 
   const subjectListWidth = useBreakpointValue({ base: '70%', lg: '85%' });
-  const filterWidth = useBreakpointValue({base:'30%',lg:'15%'});
-  const buttonSize = useBreakpointValue({base:'sm',lg:'md'});
-  const textSize = useBreakpointValue({base:'sm', lg:'md'});
-  const headerSize = useBreakpointValue({base:'sm', lg:'md'});
+  const filterWidth = useBreakpointValue({ base: '30%', lg: '15%' });
+  const buttonSize = useBreakpointValue({ base: 'sm', lg: 'md' });
+  const textSize = useBreakpointValue({ base: 'sm', lg: 'md' });
+  const headerSize = useBreakpointValue({ base: 'sm', lg: 'md' });
 
   return (
     <Box overflow='hidden'>
@@ -299,7 +299,7 @@ const SubjectManagement = ({searchQuery, user}) => {
       <Flex padding={'30px'} >
         <Box width={filterWidth} marginRight={'10px'} padding='10px' mt={4} alignItems='center'>
           <Text fontSize={headerSize} fontWeight={'bolder'} as='u' textAlign='center'>Filter By sections</Text>
-          <Flex flexDirection='column'  marginBottom='15px'>
+          <Flex flexDirection='column' marginBottom='15px'>
             {Object.keys(filters).map(filter => (
               <Checkbox key={filter} name={filter} isChecked={filters[filter]} onChange={handleCheckboxChange}>
                 <Text fontSize={textSize}>
@@ -309,52 +309,54 @@ const SubjectManagement = ({searchQuery, user}) => {
             ))}
           </Flex>
           {
-            courses.length>0?
+            courses.length > 0 ?
               <>
-                <Text  fontSize={headerSize} fontWeight={'bolder'} as='u' textAlign='center'>Filter By course</Text>
+                <Text fontSize={headerSize} fontWeight={'bolder'} as='u' textAlign='center'>Filter By course</Text>
                 <Flex flexDirection='column'>
                   {courses.map(course => {
-                    const subjectId = course.subjects.map(subject=>subject.id);
-                    return(
-                    <Checkbox 
-                      key={subjectId} 
-                      id={subjectId}  
-                      onChange={handleCourseCheckboxChange}
-                    >
-                      <Text fontSize={textSize}> 
-                        {course.course_name}
-                      </Text>
-                    </Checkbox>
-                  )})}
+                    const subjectId = course.subjects.map(subject => subject.id);
+                    return (
+                      <Checkbox
+                        key={subjectId}
+                        id={subjectId}
+                        onChange={handleCourseCheckboxChange}
+                      >
+                        <Text fontSize={textSize}>
+                          {course.course_name}
+                        </Text>
+                      </Checkbox>
+                    )
+                  })}
                 </Flex>
               </>
-            :
+              :
               null
           }
-          
+
         </Box>
         <Box width={subjectListWidth}>
-          {isLoading? (
+          {isLoading ? (
             <Flex justify="center" align="center" h="100vh">
               <Spinner />
             </Flex>
-          ): (
+          ) : (
             <>
-              <SubjectList 
+              <SubjectList
+                setCurrentPage={setCurrentPage}
                 searchQuery={searchQuery}
                 user={user}
                 fetchData={fetchData}
                 paginatedData={paginatedData}
                 handleMoreInfo={handleMoreInfo}
                 isDisabled={isDisabled}
-                filteredData={paginatedData} 
-                handleUpdateSubject={handleUpdateSubject} 
-                handleDeleteConfirmation={handleDeleteConfirmation} 
+                filteredData={paginatedData}
+                handleUpdateSubject={handleUpdateSubject}
+                handleDeleteConfirmation={handleDeleteConfirmation}
               />
               <Flex marginTop={'auto'} flexDirection={'column'} alignItems="center">
                 <Flex direction="row" align="center" mb={4}>
                   <Tooltip isDisabled={isDisabled} label='Previous Page' fontSize='md'>
-                    <IconButton 
+                    <IconButton
                       size={buttonSize}
                       icon={<ChevronLeftIcon />}
                       onClick={() => {
@@ -367,9 +369,9 @@ const SubjectManagement = ({searchQuery, user}) => {
                   </Tooltip>
                   {startPage > 1 && (
                     <>
-                      <Button 
+                      <Button
                         size={buttonSize}
-                        mx={1} 
+                        mx={1}
                         onClick={() => navigate(`/subject-management/page/1`)}
                         colorScheme={currentPage === 1 ? "blue" : "gray"}
                       >
@@ -392,9 +394,9 @@ const SubjectManagement = ({searchQuery, user}) => {
                   {endPage < totalPages && (
                     <>
                       {endPage < totalPages - 1 && <Text mx={1}>...</Text>}
-                      <Button 
+                      <Button
                         size={buttonSize}
-                        mx={1} 
+                        mx={1}
                         onClick={() => navigate(`/subject-management/page/${totalPages}`)}
                         colorScheme={totalPages === currentPage ? "blue" : "gray"}
                       >
@@ -403,7 +405,7 @@ const SubjectManagement = ({searchQuery, user}) => {
                     </>
                   )}
                   <Tooltip isDisabled={isDisabled} label='Next Page' fontSize='md'>
-                    <IconButton 
+                    <IconButton
                       size={buttonSize}
                       icon={<ChevronRightIcon />}
                       onClick={() => {
@@ -415,24 +417,24 @@ const SubjectManagement = ({searchQuery, user}) => {
                     />
                   </Tooltip>
                 </Flex>
-                  {
-                    user.role === 'admin' && (
-                      <Tooltip isDisabled={isDisabled} label='Add New Subject' fontSize='md'>
-                        <Button 
-                          onClick={onOpenAddNewSubject} 
-                          margin={'20px 0px 20px 0px'} 
-                          width='100%' 
-                          leftIcon={<AddIcon/>}
-                          colorScheme="blue"
-                        >
-                          Add New Subject
-                        </Button>
-                      </Tooltip>
-                    )
-                  }
+                {
+                  user.role === 'admin' && (
+                    <Tooltip isDisabled={isDisabled} label='Add New Subject' fontSize='md'>
+                      <Button
+                        onClick={onOpenAddNewSubject}
+                        margin={'20px 0px 20px 0px'}
+                        width='100%'
+                        leftIcon={<AddIcon />}
+                        colorScheme="blue"
+                      >
+                        Add New Subject
+                      </Button>
+                    </Tooltip>
+                  )
+                }
               </Flex>
             </>
-          )} 
+          )}
         </Box>
       </Flex>
 
@@ -446,7 +448,7 @@ const SubjectManagement = ({searchQuery, user}) => {
             {selectedSubject && (
               <UpdateSubject
                 user={user}
-                sections = {selectedSection}
+                sections={selectedSection}
                 onReset={handleResetPage}
                 isDisabled={isDisabled}
                 subject={selectedSubject}
@@ -458,9 +460,9 @@ const SubjectManagement = ({searchQuery, user}) => {
         </DrawerContent>
       </Drawer>
 
-      <Modal isOpen={isOpenAddNewSubject} onClose={onCloseAddNewSubject} size="xl">
+      <Modal isOpen={isOpenAddNewSubject} onClose={onCloseAddNewSubject} size="xl" >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent margin={5}>
           <ModalHeader>Add New Subject</ModalHeader>
           <Tooltip isDisabled={isDisabled} label='Close Modal' fontSize='md'><ModalCloseButton /></Tooltip>
           <ModalBody>
@@ -472,7 +474,7 @@ const SubjectManagement = ({searchQuery, user}) => {
       <AlertDialog
         motionPreset='slideInBottom'
         leastDestructiveRef={Ref}
-        isOpen={isOpenDeleteModal} 
+        isOpen={isOpenDeleteModal}
         onClose={onCloseDeleteModal}
         isCentered
       >
@@ -488,11 +490,11 @@ const SubjectManagement = ({searchQuery, user}) => {
             <Button colorScheme="red" ml={3} onClick={handleDeleteSubject}>
               Yes
             </Button>
-            
+
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
     </Box>
   );
 };

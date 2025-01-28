@@ -64,8 +64,9 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
     const [lecturer, setLecturer] = useState('');
     const [currentSubject, setCurrentSubject]= useState([]);
     const [deleteCheckBoxBar, setDeleteCheckBoxBar] = useState(false);
+    const [checkedItems, setCheckedItems] = useState({});
     const lecturersPerPage = 4;
-
+    
     //Change Color Mode
     const bgGreyColor = useColorModeValue('gray.100', 'gray.600'); 
     const bgWhiteColor = useColorModeValue('white', 'gray.700');
@@ -76,6 +77,7 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
     const { isOpen: isOpenAddSubject, onOpen: onOpenAddSubject, onClose: onCloseAddSubject } = useDisclosure();
     const { isOpen: isOpenUpdateLecturerModal, onOpen: onOpenUpdateLecturerModal, onClose: onCloseUpdateLecturerModal } = useDisclosure();
     const { isOpen: isOpenTimetable, onOpen: onOpenTimetable, onClose: onCloseTimetable } = useDisclosure();
+    const { isOpen:isOpenDeleteMultipleLecturerModal, onOpen: onOpenDeleteMultipleLecturerModal, onClose: onCloseDeleteMultipleLecturerModal} = useDisclosure();
 
     const toast = useToast();
     const navigate = useNavigate();
@@ -196,13 +198,13 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
     
             const data = response.data;
     
-            if (data.success && data.success.includes('deleted successfully')) {
+            if (data.message && data.message.includes('deleted successfully')) {
                 toast({
                     title: 'Success',
                     position: 'top-right',
-                    description: data.success,
+                    description: data.message,
                     status: 'success',
-                    duration: 3000,
+                    duration: 1000,
                     isClosable: true,
                 });
                 onCloseDeleteModal();
@@ -214,7 +216,7 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
                     position: 'top-right',
                     description: data.error || 'Failed to delete lecturer',
                     status: 'error',
-                    duration: 3000,
+                    duration: 1000,
                     isClosable: true,
                 });
             }
@@ -228,6 +230,8 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
                 duration: 3000,
                 isClosable: true,
             });
+        } finally { 
+            setCurrentPage(1);
         }
     };
 
@@ -327,18 +331,24 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
         onOpenTimetable();
     };
 
-    // Checkbox Logic
-    const [checkedItems, setCheckedItems] = useState({});
-    const allChecked = currentLecturers.every((lecturer) => checkedItems[lecturer.id]);
-    const isIndeterminate = currentLecturers.some((lecturer) => checkedItems[lecturer.id]) && !allChecked;
-
     useEffect(() => {
         const hasCheckedItems = Object.values(checkedItems).some(item => item === true);
         setDeleteCheckBoxBar(hasCheckedItems);
 
     }, [checkedItems]);
-    
+
+    const allChecked = currentLecturers.every((lecturer) => checkedItems[lecturer.id]);
+    const isIndeterminate = currentLecturers.some((lecturer) => checkedItems[lecturer.id]) && !allChecked;
+
+    const handleCloseMultipleDeleteLecturerModal = () => {
+        onCloseDeleteMultipleLecturerModal();
+        setCheckedItems({});
+    }
     const handleDeleteSelectedLecturers = useCallback(async () => {
+        let successCount = 0;
+        let errorCount = 0;
+
+        onCloseDeleteMultipleLecturerModal();
         const selectedLecturerIds = Object.keys(checkedItems).filter(id => checkedItems[id]);
 
         if (selectedLecturerIds.length === 0) {
@@ -365,26 +375,34 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
             
             responses.forEach(response => {
                 const result = response.data;
-                if (result.success && result.success.includes('deleted successfully')) {
-                    toast({
-                        title: 'Success',
-                        position: 'top-right',
-                        description: result.success,
-                        status: 'success',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                if (result.message && result.message.includes('deleted successfully')) {
+                    successCount++;
                 } else {
-                    toast({
-                        title: 'Error',
-                        position: 'top-right',
-                        description: result.error || `Failed to delete lecturer`,
-                        status: 'error',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    errorCount++;
                 }
             });
+
+            if (successCount > 0) {
+                toast({
+                    title: 'Success',
+                    position: 'top-right',
+                    description: `${successCount} lecturer(s) deleted successfully.`,
+                    status: 'success',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+
+            if (errorCount > 0) {
+                toast({
+                    title: 'Error',
+                    position: 'top-right',
+                    description: `${errorCount} lecturer(s) failed to delete.`,
+                    status: 'error',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
 
             setCheckedItems({});
             fetchData(); 
@@ -398,6 +416,8 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
                 duration: 1000,
                 isClosable: true,
             });
+        } finally{
+            setCurrentPage(1);
         }
     }, [checkedItems, fetchData, toast]);
 
@@ -749,7 +769,7 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
                             <MinusIcon mr={2} />
                             Deselect all items
                         </Button>
-                        <Button width='45%' colorScheme="red" onClick={()=>{handleDeleteSelectedLecturers()}}>
+                        <Button width='45%' colorScheme="red" onClick={onOpenDeleteMultipleLecturerModal}>
                             <DeleteIcon mr={2}/>
                             Delete selected items
                         </Button>
@@ -757,6 +777,33 @@ const Lecturer_Management = ({searchQuery,isMobile}) => {
                 :
                     null
             }
+            
+            <AlertDialog
+                isCentered
+                isOpen={isOpenDeleteMultipleLecturerModal}
+                onClose={onCloseDeleteMultipleLecturerModal}
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader fontSize='lg' fontWeight='bold'>
+                            Delete Lecturer
+                        </AlertDialogHeader>
+
+                        <AlertDialogBody>
+                            Are you sure? You can't undo this action afterwards.
+                        </AlertDialogBody>
+
+                        <AlertDialogFooter justifyContent='space-between'>
+                            <Button onClick={()=>{handleCloseMultipleDeleteLecturerModal()}}>
+                                Cancel
+                            </Button>
+                            <Button colorScheme='red' onClick={()=>{handleDeleteSelectedLecturers()}} ml={3}>
+                                Delete
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </>
     );
 };

@@ -32,7 +32,7 @@ const handleDeleteLecturer = (database) => async (req, res) => {
 
         if (deleteCount > 0) {
             await trx.commit();
-            res.status(200).json({ success: `${lecturer.name} deleted successfully` });
+            res.status(200).json({ message: `${lecturer.name} deleted successfully` });
         } else {
             await trx.rollback();
             res.status(400).json({ error: 'Lecturer not found or already deleted' });

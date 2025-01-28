@@ -19,12 +19,13 @@ const DailyReport = React.lazy(() => import('../../components/Report/Daily_Repor
 
 const MotionBox = motion(Box);
 
-const AdminHome = ({searchQuery}) => {
+const AdminHome = ({ searchQuery }) => {
   const [stats, setStats] = useState({
     totalStudents: 0,
     topSubjects: { currentWeek: 'Null', previousWeek: 'Null' },
     bottomSubjects: { currentWeek: 'Null', previousWeek: 'Null' },
     attendancePercentage: { currentWeek: '0%', previousWeek: '0%' },
+    attedanceCount: {currentWeek: 0, previousWeek: 0}
   });
   const bgColor = useColorModeValue('gray.100', 'gray.800');
   const statBgColor = useColorModeValue('white', 'gray.700');
@@ -34,6 +35,10 @@ const AdminHome = ({searchQuery}) => {
       try {
         const { data } = await axios.get('/display-admin-home-stats');
         setStats({
+          attedanceCount:{
+            currentWeek: data.attendance.currentWeekAttendance,
+            previousWeek: data.attendance.previousWeekAttendance,
+          },
           attendancePercentage: {
             currentWeek: `${data.attendance.currentWeekPercentage}%`,
             previousWeek: `${data.attendance.previousWeekPercentage}%`,
@@ -56,7 +61,6 @@ const AdminHome = ({searchQuery}) => {
     fetchStats();
   }, []);
 
-  // Memoizing statsData so it's only recalculated when stats change
   const statsData = useMemo(() => [
     { label: 'Total Students', value: stats.totalStudents, trend: '' },
     { label: 'Top Attending Subject (This Week)', value: stats.topSubjects.currentWeek, trend: '' },
@@ -66,6 +70,10 @@ const AdminHome = ({searchQuery}) => {
       value: stats.attendancePercentage.currentWeek,
       trend: stats.attendancePercentage.currentWeek >= stats.attendancePercentage.previousWeek ? 'increase' : 'decrease',
     },
+    {
+      label: 'Attendance Count (This Week)',
+      value: stats.attedanceCount.currentWeek
+    }
   ], [stats]);
 
   return (
@@ -92,7 +100,7 @@ const AdminHome = ({searchQuery}) => {
           </Box>
         </MotionBox>
         <Flex padding='10px 70px'>
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4} mb={8}>
+          <SimpleGrid columns={{ base: 3,lg: 5 }} spacing={4} mb={8}  >
             {statsData.map((stat, index) => (
               <MotionBox
                 key={index}
@@ -126,7 +134,7 @@ const AdminHome = ({searchQuery}) => {
         </Flex>
 
         <React.Suspense fallback={<div>Loading Daily Report...</div>}>
-          <DailyReport searchQuery={searchQuery}/>
+          <DailyReport searchQuery={searchQuery} />
         </React.Suspense>
       </Flex>
     </>

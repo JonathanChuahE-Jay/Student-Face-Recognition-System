@@ -1,17 +1,36 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { 
     Flex, useToast, Text, Box, Badge, Tooltip, Avatar, useBreakpointValue, 
     Button, Grid, IconButton, Input, InputGroup, InputLeftElement, 
-    InputRightElement, CloseButton 
+    InputRightElement, CloseButton, 
+    Stack,
+    Checkbox,
+    Switch,
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+    PopoverArrow,
+    PopoverCloseButton,
+    PopoverHeader,
+    PopoverBody
 } from "@chakra-ui/react";
 import axios from 'axios';
 import { AddIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, DeleteIcon, Search2Icon } from "@chakra-ui/icons";
+import { FaFilter } from "react-icons/fa";
 
 const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester, onClose, isDisabled, handleSubject, isUpdate ,handleUpdate}) => {
     const [filteredData, setFilteredData] = useState([]);
     const [selectedSubjects, setSelectedSubjects] = useState([]);
     const [displaySelectedSubjects, setDisplaySelectedSubjects] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterOptions, setFilterOptions] = useState({
+        freeModule: true,
+        mpuCompulsory: true,
+        showNotTaken: true,
+        collegeCompulsory: true,
+        core: true,
+        technicalElectives: true,
+    });
 
     const subjectsPerPage = useBreakpointValue({ base: 4, xl: 6 });
     const [currentPage, setCurrentPage] = useState(1);
@@ -81,7 +100,6 @@ const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester
             setDisplaySelectedSubjects([]);
         }
     }, [selectedSubjects, toast]);
-    
 
     useEffect(() => {
         setCurrentPage(1); 
@@ -100,7 +118,6 @@ const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester
         });
     };
     
-
     const handleSave = () => {
         if (isUpdate) {
             handleUpdate(displaySelectedSubjects, assignedYear, assignedSemester);
@@ -118,14 +135,47 @@ const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester
         });
         onClose();
     };
-    // Filter based on search query
-    const filteredSubjects = useMemo(() => 
-        filteredData.filter(subject =>
-            subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            subject.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            subject.section.toLowerCase().includes(searchQuery.toLowerCase())
-        ), [filteredData, searchQuery]);
 
+    // Filter based on search query
+    const filteredSubjects = useMemo(() => {
+        let filteredSaveSubjects = [];
+    
+        if (!isUpdate) {
+            const subjects = allSaveSubjects.flatMap(subject => subject.subjects);
+            filteredSaveSubjects = subjects.filter(
+                sub => sub.year !== assignedYear || sub.semester !== assignedSemester
+            );
+        } else {
+            filteredSaveSubjects = allSaveSubjects.filter(
+                saveSubject => saveSubject.year !== assignedYear || saveSubject.semester !== assignedSemester
+            );
+        }
+    
+        const allSaveSubjectIds = filteredSaveSubjects.map(saveSubject => saveSubject.id);
+    
+        return filteredData.filter(subject => {
+            // Check if the subject matches the search query
+            const isSearchMatch = subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  subject.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  subject.section.toLowerCase().includes(searchQuery.toLowerCase());
+    
+            // Check if the subject matches the section filters
+            const isSectionMatch = (
+                (filterOptions.freeModule && subject.section === "Free Module") ||
+                (filterOptions.mpuCompulsory && subject.section === "MPU Compulsory") ||
+                (filterOptions.collegeCompulsory && subject.section === "College Compulsory") ||
+                (filterOptions.core && subject.section === "Core") ||
+                (filterOptions.technicalElectives && subject.section === "Technical Electives")
+            );
+    
+            // Determine if the subject is not taken (optional filter)
+            const isNotTakenSubject = !filterOptions.showNotTaken || !allSaveSubjectIds.includes(subject.id);
+    
+            // Combine all filters
+            return isSearchMatch && isSectionMatch && isNotTakenSubject;
+        });
+    }, [filteredData, searchQuery, filterOptions, allSaveSubjects, isUpdate, assignedYear, assignedSemester]);
+    
     const filteredSelectedSubjects = useMemo(() => 
         displaySelectedSubjects.filter(subject =>
             subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -139,7 +189,6 @@ const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester
         (currentPage - 1) * subjectsPerPage,
         currentPage * subjectsPerPage
     ), [filteredSubjects, currentPage, subjectsPerPage]);
-
 
     const totalPages = Math.ceil(filteredSubjects.length / subjectsPerPage);
 
@@ -162,7 +211,6 @@ const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester
             endPage = currentPage + halfRange;
         }
     }
-
     const selectLabel = useBreakpointValue({ base: "", xl: " Select" });
     const selectedLabel = useBreakpointValue({ base: "", xl: " selected " });
     const buttonMinWidth = useBreakpointValue({ base: "50px",md: '80px', xl: "100px" });
@@ -175,19 +223,73 @@ const AddSubjects = ({ allSaveSubjects, subjects, assignedYear, assignedSemester
 
     return (
         <Flex flexDirection='column'>
-            <InputGroup>
-                <InputLeftElement><Search2Icon /></InputLeftElement>
-                <Input 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    variant='flushed' 
-                    marginBottom='20px' 
-                    placeholder="Search..." 
-                />
-                <InputRightElement>
-                    <CloseButton onClick={() => setSearchQuery('')} />
-                </InputRightElement>
-            </InputGroup>
+            <Flex>
+                <InputGroup width='95%'>
+                    <InputLeftElement><Search2Icon /></InputLeftElement>
+                    <Input 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        variant='flushed' 
+                        marginBottom='20px' 
+                        placeholder="Search..." 
+                    />
+                    <InputRightElement>
+                        <CloseButton onClick={() => setSearchQuery('')} />
+                    </InputRightElement>
+                </InputGroup>
+                <Popover>
+                    <PopoverTrigger>
+                        <IconButton ml={5} icon={<FaFilter />} width='5%'/>
+                    </PopoverTrigger>
+                    <PopoverContent width='300px'>
+                        <PopoverArrow />
+                        <PopoverCloseButton />
+                        <PopoverHeader>Filter Options</PopoverHeader>
+                        <PopoverBody>
+                            <Stack>
+                                <Checkbox 
+                                    isChecked={filterOptions.collegeCompulsory} 
+                                    onChange={(e) => setFilterOptions({ ...filterOptions, collegeCompulsory: e.target.checked })}
+                                >
+                                    College Compulsory
+                                </Checkbox>
+                                <Checkbox 
+                                    isChecked={filterOptions.mpuCompulsory} 
+                                    onChange={(e) => setFilterOptions({ ...filterOptions, mpuCompulsory: e.target.checked })}
+                                >
+                                    MPU Compulsory
+                                </Checkbox>
+                                <Checkbox 
+                                    isChecked={filterOptions.core} 
+                                    onChange={(e) => setFilterOptions({ ...filterOptions, core: e.target.checked })}
+                                >
+                                    Core
+                                </Checkbox>
+                                <Checkbox 
+                                    isChecked={filterOptions.technicalElectives} 
+                                    onChange={(e) => setFilterOptions({ ...filterOptions, technicalElectives: e.target.checked })}
+                                >
+                                    Technical Electives
+                                </Checkbox>
+                                <Checkbox 
+                                    isChecked={filterOptions.freeModule} 
+                                    onChange={(e) => setFilterOptions({ ...filterOptions, freeModule: e.target.checked })}
+                                >
+                                    Free Module
+                                </Checkbox>
+                                <Flex alignItems="center">
+                                    <Text mr={4}>Show Only Not Taken Subjects</Text>
+                                    <Switch
+                                        isChecked={filterOptions.showNotTaken} 
+                                        onChange={(e) => setFilterOptions({ ...filterOptions, showNotTaken: e.target.checked })}
+                                    />
+                                </Flex>
+                            </Stack>
+                        </PopoverBody>
+                    </PopoverContent>
+                </Popover>
+            </Flex>
+            
             <Flex>
                 <Flex width={{ base: '100%', md: '40%' }} maxHeight='60vh' flexDirection='column' marginRight={{ base: '10px', md: '20px' }} mb={{ base: 4, md: 0 }} overflowY='scroll'>
                     <Text fontSize='20px' textAlign='center' mb='10px' fontWeight="bold">Selected Subjects</Text>

@@ -1,10 +1,162 @@
 [
     {
-        "name": "Adam ong",
-        "email": "adam@gmail.com",
-        "password": "uni10pass!",
-        "contact_number": "019232123!",
-        "lecturer_id": "10231231",
-        "profile_picture": "https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg"
+        "name": "Umair Hassan",
+        "email": "umair.hassan01@gmail.com",
+        "password": "",
+        "contact_number": "0172233445",
+        "lecturer_id": "10231251",
+        "profile_picture": ""
+    },
+    {
+        "name": "Victor Tan",
+        "email": "victor.tan02@gmail.com",
+        "password": "",
+        "contact_number": "0187654321",
+        "lecturer_id": "10231252",
+        "profile_picture": ""
+    },
+    {
+        "name": "Wendy Chia",
+        "email": "wendy.chia03@gmail.com",
+        "password": "",
+        "contact_number": "0135556789",
+        "lecturer_id": "10231253",
+        "profile_picture": ""
+    },
+    {
+        "name": "Xavier Lim",
+        "email": "xavier.lim04@gmail.com",
+        "password": "",
+        "contact_number": "0149991234",
+        "lecturer_id": "10231254",
+        "profile_picture": ""
+    },
+    {
+        "name": "Yasmine Ng",
+        "email": "yasmine.ng05@gmail.com",
+        "password": "",
+        "contact_number": "0168887777",
+        "lecturer_id": "10231255",
+        "profile_picture": ""
+    },
+    {
+        "name": "Zachary Lee",
+        "email": "zachary.lee06@gmail.com",
+        "password": "",
+        "contact_number": "0123344556",
+        "lecturer_id": "10231256",
+        "profile_picture": ""
+    },
+    {
+        "name": "Angela Tan",
+        "email": "angela.tan07@gmail.com",
+        "password": "",
+        "contact_number": "0191231234",
+        "lecturer_id": "10231257",
+        "profile_picture": ""
+    },
+    {
+        "name": "Bryan Low",
+        "email": "bryan.low08@gmail.com",
+        "password": "",
+        "contact_number": "0134567890",
+        "lecturer_id": "10231258",
+        "profile_picture": ""
+    },
+    {
+        "name": "Cindy Wong",
+        "email": "cindy.wong09@gmail.com",
+        "password": "",
+        "contact_number": "0141234567",
+        "lecturer_id": "10231259",
+        "profile_picture": ""
+    },
+    {
+        "name": "Derek Koh",
+        "email": "derek.koh10@gmail.com",
+        "password": "",
+        "contact_number": "0167654321",
+        "lecturer_id": "10231260",
+        "profile_picture": ""
+    },
+    {
+        "name": "Eliza Chan",
+        "email": "eliza.chan11@gmail.com",
+        "password": "",
+        "contact_number": "0182345678",
+        "lecturer_id": "10231261",
+        "profile_picture": ""
+    },
+    {
+        "name": "Fiona Lee",
+        "email": "fiona.lee12@gmail.com",
+        "password": "",
+        "contact_number": "0121239876",
+        "lecturer_id": "10231262",
+        "profile_picture": ""
+    },
+    {
+        "name": "George Tan",
+        "email": "george.tan13@gmail.com",
+        "password": "",
+        "contact_number": "0174567890",
+        "lecturer_id": "10231263",
+        "profile_picture": ""
+    },
+    {
+        "name": "Hannah Ong",
+        "email": "hannah.ong14@gmail.com",
+        "password": "",
+        "contact_number": "0134561234",
+        "lecturer_id": "10231264",
+        "profile_picture": ""
+    },
+    {
+        "name": "Ian Lim",
+        "email": "ian.lim15@gmail.com",
+        "password": "",
+        "contact_number": "0147890123",
+        "lecturer_id": "10231265",
+        "profile_picture": ""
+    },
+    {
+        "name": "Joanne Ng",
+        "email": "joanne.ng16@gmail.com",
+        "password": "",
+        "contact_number": "0165678901",
+        "lecturer_id": "10231266",
+        "profile_picture": ""
+    },
+    {
+        "name": "Kevin Yap",
+        "email": "kevin.yap17@gmail.com",
+        "password": "",
+        "contact_number": "0182341234",
+        "lecturer_id": "10231267",
+        "profile_picture": ""
+    },
+    {
+        "name": "Linda Chan",
+        "email": "linda.chan18@gmail.com",
+        "password": "",
+        "contact_number": "0195674321",
+        "lecturer_id": "10231268",
+        "profile_picture": ""
+    },
+    {
+        "name": "Marcus Lee",
+        "email": "marcus.lee19@gmail.com",
+        "password": "",
+        "contact_number": "0126781234",
+        "lecturer_id": "10231269",
+        "profile_picture": ""
+    },
+    {
+        "name": "Natalie Wong",
+        "email": "natalie.wong20@gmail.com",
+        "password": "",
+        "contact_number": "0178901234",
+        "lecturer_id": "10231270",
+        "profile_picture": ""
     }
 ]

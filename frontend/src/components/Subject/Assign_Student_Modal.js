@@ -82,8 +82,15 @@ const AssignStudentModal = ({ subject_sections, exisitingStudents, onClose, subj
     };
 
     const handleAddStudents = () => {
+        const filteredStudents = selectedStudents.map(({ id, subject_section, current_year, current_semester }) => ({
+            id,
+            subject_section,
+            current_year,
+            current_semester,
+        }));
+
         axios.post('http://localhost:5000/alter-assigned-student', {
-            selectedStudents,
+            selectedStudents: filteredStudents,
             mode: 'Alter',
             subject_id
         })

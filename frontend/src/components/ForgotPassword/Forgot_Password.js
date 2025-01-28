@@ -237,7 +237,7 @@ const ForgotPassword = () => {
                   <Box display={"flex"} flexDirection={"column"} height={"100px"}>
                     <Box display="flex" justifyContent="space-between" marginTop="auto">
                       <Button marginTop="20px" width="40%" onClick={handleBackToForgotPassword} >Back</Button>
-                      <Button marginTop="20px" onClick={handleCorrectPassword} isLoading={isLoading}>
+                      <Button marginTop="20px" width="40%" onClick={handleCorrectPassword} isLoading={isLoading}>
                         Confirm OTP
                       </Button>
                     </Box>

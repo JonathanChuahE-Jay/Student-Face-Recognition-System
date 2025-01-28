@@ -5,6 +5,7 @@ const knex = require("knex");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
 const path = require('path');
+const bodyParser = require('body-parser');
 
 const { handleRegister } = require('./controllers/Accounts/Authentication/Register');
 const { handleLogin } = require("./controllers/Accounts/Authentication/Login");
@@ -50,13 +51,15 @@ const { handleAlterSessionLogs } = require("./controllers/Subjects/AlterSessionL
 const { handleAutoSessionLogs } = require("./controllers/Subjects/AutoSessionLogs");
 const { handleSubjectRegistration } = require("./controllers/Accounts/Students/SubjectRegistration");
 const { handleNextSemester } = require("./controllers/Accounts/Authentication/NextSemester");
+const { handleLecturerHomeStats } = require("./controllers/Stats/LecturerHomeStats");
 
 const app = express();
 app.use(cors());
 app.use(cookieParser());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+app.use(bodyParser.json({ limit: 'Infinity' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: 'Infinity' }));
 const database = knex({
     client: 'pg',
     connection: {
@@ -112,6 +115,7 @@ app.get('/show-lecturers', handleShowLecturers(database));
 app.delete('/delete-lecturer', handleDeleteLecturer(database));
 app.post('/update-lecturer', handleUpdateLecturer(database)); 
 app.post('/assign-subject-lecturer', handleAssignSubjectToLecturer(database));
+app.post('/lecturer-home-stats',handleLecturerHomeStats(database));
 
 // Subjects
 app.post('/add-new-subject', handleAddNewSubject(database));

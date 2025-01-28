@@ -10,7 +10,8 @@ import {
     Stack,
     Flex,
     useToast,
-    Link
+    Link,
+    useBreakpointValue
 } from "@chakra-ui/react";
 import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
@@ -26,7 +27,7 @@ const Login = ({ loadUser, logoutUser }) => {
     const navigate = useNavigate();
 
     const handleShowPassword = () => setShowPassword(!showPassword);
-    
+    const width = useBreakpointValue({ base: "50%", lg: "30%" });
     const handleLogin = async () => {
         setLoading(true);
         try {
@@ -89,7 +90,7 @@ const Login = ({ loadUser, logoutUser }) => {
         <Center height="90vh">
             <Stack
                 height="50%"
-                width="50%"
+                width={width}
                 padding="20px"
                 borderRadius="20px"
                 boxShadow="rgba(0, 0, 0, 0.35) 0px 5px 15px"
@@ -118,8 +119,8 @@ const Login = ({ loadUser, logoutUser }) => {
                     </InputGroup>
                     <Link href="/forgot-password">Forgot password?</Link>
                     <Flex justifyContent="space-between" marginTop="20px">
-                        <Button onClick={() => navigate("/register")}>Sign up</Button>
-                        <Button isLoading={loading} onClick={handleLogin} isDisabled={loading}>
+                        <Button width='30%' onClick={() => navigate("/register")}>Sign up</Button>
+                        <Button width='30%' isLoading={loading} onClick={handleLogin} isDisabled={loading}>
                             Log in
                         </Button>
                     </Flex>

@@ -16,6 +16,7 @@ import {
   IconButton,
   Tooltip,
   useColorModeValue,
+  Spinner,
 } from "@chakra-ui/react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 import axios from "axios";
@@ -28,6 +29,7 @@ const StudentHome = ({ searchQuery, user }) => {
   const [upcomingClasses, setUpcomingClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [filteredAttendances, setFilteredAttendances] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [attendancePage, setAttendancePage] = useState(1);
   const [classesPage, setClassesPage] = useState(1);
@@ -35,23 +37,27 @@ const StudentHome = ({ searchQuery, user }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-        try {
-            const response = await axios.post("/show-attendances", { student_id: user?.id });
-            const attendances = response.data.studentAttendance || [];
-            const sortedAttendances = attendances.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setLoading(true);
+      try {
+        const response = await axios.post("/show-attendances", { student_id: user?.id });
+        const attendances = response.data.studentAttendance || [];
+        const sortedAttendances = attendances.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            setRecentAttendances(sortedAttendances);
-            setFilteredAttendances(sortedAttendances);
-        } catch (error) {
-            console.error("Error fetching attendance:", error);
-        }
+        setRecentAttendances(sortedAttendances);
+        setFilteredAttendances(sortedAttendances);
+      } catch (error) {
+        console.error("Error fetching attendance:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
-}, [user]);
+  }, [user]);
 
   useEffect(() => {
     const fetchSubjects = async () => {
+      setLoading(true);
       try {
         const response = await axios.get("/show-all-subjects", {
           params: { student_id: user?.id },
@@ -73,6 +79,8 @@ const StudentHome = ({ searchQuery, user }) => {
         setUpcomingClasses(flattenedSections);
       } catch (error) {
         console.error("Error fetching subjects:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -170,107 +178,122 @@ const StudentHome = ({ searchQuery, user }) => {
     );
   };
   return (
-    <Box p={5}>
-      <Heading mb={5} color="teal.500">
-        Welcome, {user?.name || "Student"}!
-      </Heading>
+    <>
+      {
+        loading ? (
+          <Box p={5} textAlign="center">
+            <Spinner size='md'/>
+            <Text fontSize="xl" color="teal.500">
+              Loading, please wait...
+            </Text>
+          </Box>
+        ) : (
+          <Box p={5}>
+            <Heading mb={5} color="teal.500">
+              Welcome, {user?.name || "Student"}!
+            </Heading>
 
-      {/* Attendance Section */}
-      <Box bg={cardBg} p={5} rounded="lg" shadow="md" mb={6}>
-        <Heading size="md" mb={3} color="blue.600">
-          Recent Attendance
-        </Heading>
-        <Table variant="simple" size="md">
-          <Thead>
-            <Tr>
-              <Th>Subject</Th>
-              <Th>Date</Th>
-              <Th>Status</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {
-              filteredAttendances.length > 0 ?
-              paginate(filteredAttendances, attendancePage).map((attendance, index) => (
-                <Tr key={index}>
-                  <Td>{attendance.subject_name || "Unknown"}</Td>
-                  <Td>{convertToMYRTime(attendance.date)}</Td>
-                  <Td>
-                    <Badge
-                      colorScheme={attendance.status === "Present" ? "green" : "red"}
-                      display="inline-flex"
-                      alignItems="center"
-                    >
-                      <Icon
-                        as={attendance.status === "Present" ? FaCheckCircle : FaTimesCircle}
-                        mr={1}
-                      />
-                      {attendance.status}
-                    </Badge>
-                  </Td>
-                </Tr>
-              ))
-              :
-              <Tr>
-                <Td colSpan="3" textAlign='center'>
-                  No attendance available
-                </Td>
-              </Tr>
-            }
-          </Tbody>
-        </Table>
-        {renderPagination(
-          attendancePage,
-          Math.ceil(filteredAttendances.length / recordsPerPage),
-          setAttendancePage
-        )}
-      </Box>
+            {/* Attendance Section */}
+            <Box bg={cardBg} p={5} rounded="lg" shadow="md" mb={6}>
+              <Heading size="md" mb={3} color="blue.600">
+                Recent Attendance
+              </Heading>
+              <Table variant="simple" size="md">
+                <Thead>
+                  <Tr>
+                    <Th>Subject</Th>
+                    <Th>Date</Th>
+                    <Th>Status</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {
+                    filteredAttendances.length > 0 ?
+                      paginate(filteredAttendances, attendancePage).map((attendance, index) => (
+                        <Tr key={index}>
+                          <Td>{attendance.subject_name || "Unknown"}</Td>
+                          <Td>{convertToMYRTime(attendance.date)}</Td>
+                          <Td>
+                            <Badge
+                              colorScheme={attendance.status === "Present" ? "green" : "red"}
+                              display="inline-flex"
+                              alignItems="center"
+                            >
+                              <Icon
+                                as={attendance.status === "Present" ? FaCheckCircle : FaTimesCircle}
+                                mr={1}
+                              />
+                              {attendance.status}
+                            </Badge>
+                          </Td>
+                        </Tr>
+                      ))
+                      :
+                      <Tr>
+                        <Td colSpan="3" textAlign='center'>
+                          No attendance available
+                        </Td>
+                      </Tr>
+                  }
+                </Tbody>
+              </Table>
+              {renderPagination(
+                attendancePage,
+                Math.ceil(filteredAttendances.length / recordsPerPage),
+                setAttendancePage
+              )}
+            </Box>
 
-      {/* Upcoming Classes Section */}
-      <Box bg={cardBg} p={5} rounded="lg" shadow="md">
-        <Heading size="md" mb={3} color="blue.600">
-          Upcoming Subjects
-        </Heading>
-        <Table variant="simple" size="md">
-          <Thead>
-            <Tr>
-              <Th>Subject</Th>
-              <Th>Day</Th>
-              <Th>Section</Th>
-              <Th>Time</Th>
-              <Th>Venue</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {
-              filteredClasses.length > 0 ?
-              paginate(filteredClasses, classesPage).map((classes, index) => (
-                <Tr key={index}>
-                  <Td>{classes.name || "Unknown"}</Td>
-                  <Td>{classes.day || "Unknown"}</Td>
-                  <Td>Section: {classes.section_number}</Td>
-                  <Td>
-                    {classes.start_time || "00:00:00"} - {classes.end_time || "00:00:00"}
-                  </Td>
-                  <Td>{classes.venue || "Unknown"}</Td>
-                </Tr>
-              ))
-              :
-              <Tr>
-                <Td colSpan="4" textAlign='center'>
-                  No Subjects available
-                </Td>
-              </Tr>
-            }
-          </Tbody>
-        </Table>
-        {renderPagination(
-          classesPage,
-          Math.ceil(filteredClasses.length / recordsPerPage),
-          setClassesPage
-        )}
-      </Box>
-    </Box>
+            {/* Upcoming Classes Section */}
+            <Box bg={cardBg} p={5} rounded="lg" shadow="md">
+              <Heading size="md" mb={3} color="blue.600">
+                Upcoming Subjects
+              </Heading>
+              <Table variant="simple" size="md">
+                <Thead>
+                  <Tr>
+                    <Th>Subject</Th>
+                    <Th>Day</Th>
+                    <Th>Section</Th>
+                    <Th>Time</Th>
+                    <Th>Venue</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {
+                    filteredClasses.length > 0 ?
+                      paginate(filteredClasses, classesPage).map((classes, index) => (
+                        <Tr key={index}>
+                          <Td>{classes.name || "Unknown"}</Td>
+                          <Td>{classes.day || "Unknown"}</Td>
+                          <Td>Section: {classes.section_number}</Td>
+                          <Td>
+                            {classes.start_time || "00:00:00"} - {classes.end_time || "00:00:00"}
+                          </Td>
+                          <Td>{classes.venue || "Unknown"}</Td>
+                        </Tr>
+                      ))
+                      :
+                      <Tr>
+                        <Td colSpan="4" textAlign='center'>
+                          No Subjects available
+                        </Td>
+                      </Tr>
+                  }
+                </Tbody>
+              </Table>
+              {renderPagination(
+                classesPage,
+                Math.ceil(filteredClasses.length / recordsPerPage),
+                setClassesPage
+              )}
+            </Box>
+          </Box>
+        )
+      }
+    </>
+
+
   );
 };
 

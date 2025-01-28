@@ -21,7 +21,6 @@ const AddNewCourse = ({isDisabled, onClose, onRefresh}) => {
     const [years, setYears] = useState('');
     const [semesters, setSemesters] = useState('');
     const [programme, setProgramme] =useState('');
-    
     const { isOpen: isOpenSelectDuration, onOpen: onOpenSelectDuration, onClose: onCloseSelectDuration } = useDisclosure();
     const { isOpen: isOpenAddDuration, onOpen: onOpenAddDuration, onClose: onCloseAddDuration } = useDisclosure();
     const toast = useToast();

@@ -74,7 +74,8 @@ const StudentManagement = ({user, searchQuery}) => {
     const { isOpen: isOpenUpdateStudentModal, onOpen: onOpenUpdateStudentModal, onClose: onCloseUpdateStudentModal } = useDisclosure();
     const { isOpen: isOpenDeleteStudentModal, onOpen: onOpenDeleteStudentModal, onClose: onCloseDeleteStudentModal } = useDisclosure();
     const { isOpen: isOpenViewCourseDrawer, onOpen: onOpenViewCourseDrawer, onClose: onCloseViewCourseDrawer } = useDisclosure();  
-
+    const { isOpen: isOpenDeleteMultipleStudentAlert, onOpen: onOpenDeleteMultipleStudentAlert, onClose: onCloseDeleteMultipleStudentAlert } = useDisclosure();
+    
     const formattedDate = (timestamp) => new Date(timestamp).toLocaleString('en-GB', {
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
@@ -160,10 +161,11 @@ const StudentManagement = ({user, searchQuery}) => {
                 });
             }
         } catch (error) {
+            const backendError = error.response?.data?.error;
             toast({
                 title: 'Error',
                 position: 'top-right',
-                description: `An error occurred: ${error.message}`,
+                description: backendError||`An error occurred: ${error.message}`,
                 status: 'error',
                 duration: 1000,
                 isClosable: true,
@@ -281,6 +283,9 @@ const StudentManagement = ({user, searchQuery}) => {
     
     
     const handleDeleteSelectedStudents = useCallback(async () => {
+        let successCount = 0;
+        let errorCount = 0;
+
         const selectedStudentIds = Object.keys(checkedItems).filter(id => checkedItems[id]);
 
         if (selectedStudentIds.length === 0) {
@@ -308,26 +313,34 @@ const StudentManagement = ({user, searchQuery}) => {
             responses.forEach(response => {
                 const result = response.data;
                 if (result.message && result.message.includes('deleted successfully')) {
-                    toast({
-                        title: 'Success',
-                        position: 'top-right',
-                        description: result.message,
-                        status: 'success',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    successCount++;
                 } else {
-                    toast({
-                        title: 'Error',
-                        position: 'top-right',
-                        description: result.error || `Failed to delete student`,
-                        status: 'error',
-                        duration: 1000,
-                        isClosable: true,
-                    });
+                    errorCount++;
                 }
             });
 
+            if (successCount > 0) {
+                toast({
+                    title: 'Success',
+                    position: 'top-right',
+                    description: `${successCount} student(s) deleted successfully.`,
+                    status: 'success',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+
+            if (errorCount > 0) {
+                toast({
+                    title: 'Error',
+                    position: 'top-right',
+                    description: `${errorCount} student(s) failed to delete.`,
+                    status: 'error',
+                    duration: 1000,
+                    isClosable: true,
+                });
+            }
+            setCurrentPage(1);
             setCheckedItems({});
             fetchData(); 
 
@@ -341,6 +354,7 @@ const StudentManagement = ({user, searchQuery}) => {
                 isClosable: true,
             });
         }
+        onCloseDeleteMultipleStudentAlert();
     }, [checkedItems, fetchData, toast]);
 
     return (
@@ -644,11 +658,11 @@ const StudentManagement = ({user, searchQuery}) => {
                 <AlertDialogBody>
                     Are you sure you want to delete {student ? student.name : 'this student'}?
                 </AlertDialogBody>
-                <AlertDialogFooter>
-                    <Button ref={Ref} onClick={onCloseDeleteStudentModal}>
+                <AlertDialogFooter display='flex' justifyContent='space-between'>
+                    <Button width='25%' ref={Ref} onClick={onCloseDeleteStudentModal}>
                     No
                     </Button>
-                    <Button colorScheme='red' onClick={handleDeleteStudent} ml={3}>
+                    <Button width='25%' colorScheme='red' onClick={handleDeleteStudent} ml={3}>
                     Yes
                     </Button>
                 </AlertDialogFooter>
@@ -683,7 +697,7 @@ const StudentManagement = ({user, searchQuery}) => {
                             <MinusIcon mr={2} />
                             Deselect all items
                         </Button>
-                        <Button width='45%' colorScheme="red" onClick={()=>{handleDeleteSelectedStudents()}}>
+                        <Button width='45%' colorScheme="red" onClick={()=>{onOpenDeleteMultipleStudentAlert()}}>
                             <DeleteIcon mr={2}/>
                             Delete selected items
                         </Button>
@@ -691,6 +705,32 @@ const StudentManagement = ({user, searchQuery}) => {
                 :
                     null
             }
+            <AlertDialog
+                isCentered
+                isOpen={isOpenDeleteMultipleStudentAlert}
+                onClose={onCloseDeleteMultipleStudentAlert}
+            >
+                <AlertDialogOverlay>
+                <AlertDialogContent>
+                    <AlertDialogHeader fontSize='lg' fontWeight='bold'>
+                        Delete Students?
+                    </AlertDialogHeader>
+
+                    <AlertDialogBody>
+                        Are you sure? You can't undo this action afterwards.
+                    </AlertDialogBody>
+
+                    <AlertDialogFooter display='flex' justifyContent='space-between'>
+                    <Button width='25%' onClick={onCloseDeleteMultipleStudentAlert}>
+                        Cancel
+                    </Button>
+                    <Button width='25%' colorScheme='red' onClick={()=>{handleDeleteSelectedStudents()}} ml={3}>
+                        Delete
+                    </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </Flex>
     );
 }

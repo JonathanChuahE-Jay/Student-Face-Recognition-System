@@ -1,15 +1,33 @@
 [
   {
-    "subjectName": "Software Principle",
-    "subjectCode": "SP0192",
-    "subjectSection": "MPU Compulsory",
-    "numberOfSections": 4,
+    "subjectName": "Electrical Circuit Analysis",
+    "subjectCode": "EE0210",
+    "subjectSection": "Core",
+    "numberOfSections": 3,
     "sectionTimes": [
-      { "startTime": "10:00", "endTime": "12:00", "day": "Tuesday", "venue": "Room 201", "maxStudents": 25 },
-      { "startTime": "13:00", "endTime": "15:00", "day": "Thursday", "venue": "Room 202", "maxStudents": 25 },
-      { "startTime": "09:00", "endTime": "11:00", "day": "Friday", "venue": "Room 203", "maxStudents": 25 },
-      { "startTime": "14:00", "endTime": "16:00", "day": "Friday", "venue": "Room 204", "maxStudents": 25 }
+      { "startTime": "09:00", "endTime": "11:00", "day": "Monday", "venue": "Lab 101", "maxStudents": 30 },
+      { "startTime": "14:00", "endTime": "16:00", "day": "Wednesday", "venue": "Room 301", "maxStudents": 30 },
+      { "startTime": "10:00", "endTime": "12:00", "day": "Thursday", "venue": "Room 302", "maxStudents": 30 }
+    ]
+  },
+  {
+    "subjectName": "Digital Electronics",
+    "subjectCode": "EE0315",
+    "subjectSection": "Core",
+    "numberOfSections": 2,
+    "sectionTimes": [
+      { "startTime": "11:00", "endTime": "13:00", "day": "Tuesday", "venue": "Lab 202", "maxStudents": 25 },
+      { "startTime": "15:00", "endTime": "17:00", "day": "Thursday", "venue": "Room 303", "maxStudents": 25 }
+    ]
+  },
+  {
+    "subjectName": "Power Systems",
+    "subjectCode": "EE0401",
+    "subjectSection": "Core",
+    "numberOfSections": 2,
+    "sectionTimes": [
+      { "startTime": "09:00", "endTime": "11:00", "day": "Wednesday", "venue": "Room 305", "maxStudents": 20 },
+      { "startTime": "14:00", "endTime": "16:00", "day": "Friday", "venue": "Lab 203", "maxStudents": 20 }
     ]
   }
 ]
-

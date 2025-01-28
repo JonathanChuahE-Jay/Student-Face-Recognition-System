@@ -1,14 +1,62 @@
 [
     {
-        "prefix": "SW",
-        "name": "Jack Lim",
-        "email": "jacklim@gmail.com",
-        "password": "uni10pass!",
-        "facial_path": "path/to/facial/image",
+        "prefix": "CE",
+        "name": "Felix Tan",
+        "email": "felixtan@gmail.com",
+        "password": "FelixT@123",
+        "facial_path": "",
+        "programme": "Bachelor",
+        "currentIntakeSemester": 2,
+        "currentIntakeYear": 1,
+        "student_id": "20932137",
+        "profile_picture": ""
+    },
+    {
+        "prefix": "SE",
+        "name": "Grace Lee",
+        "email": "gracelee@gmail.com",
+        "password": "GraceLee#99",
+        "facial_path": "",
         "programme": "Bachelor",
         "currentIntakeSemester": 1,
+        "currentIntakeYear": 2,
+        "student_id": "20932138",
+        "profile_picture": "https://t4.ftcdn.net/jpg/03/98/99/65/360_F_398996576_Ri8GzZRMMa9eYtCNh1kB2KYZP0PnbGi8.jpg"
+    },
+    {
+        "prefix": "ME",
+        "name": "Harry Ng",
+        "email": "harryng@gmail.com",
+        "password": "HarryN$456",
+        "facial_path": "",
+        "programme": "Diploma",
+        "currentIntakeSemester": 1,
+        "currentIntakeYear": 3,
+        "student_id": "20932139",
+        "profile_picture": ""
+    },
+    {
+        "prefix": "MM",
+        "name": "Isabel Tan",
+        "email": "isabeltan@gmail.com",
+        "password": "IsabelT@2025",
+        "facial_path": "",
+        "programme": "Bachelor",
+        "currentIntakeSemester": 3,
         "currentIntakeYear": 1,
-        "student_id": "20932131",
-        "profile_picture": "https://t4.ftcdn.net/jpg/00/64/67/63/360_F_64676383_LdbmhiNM6Ypzb3FM4PPuFP9rHe7ri8Ju.jpg"
+        "student_id": "20932140",
+        "profile_picture": "https://t3.ftcdn.net/jpg/01/12/57/09/360_F_112570923_vhW6dP9NZJjv2XM75xF0l84m6v39pW9P.jpg"
+    },
+    {
+        "prefix": "CE",
+        "name": "Jackie Wong",
+        "email": "jackiewong@gmail.com",
+        "password": "JackieWong!2023",
+        "facial_path": "",
+        "programme": "Diploma",
+        "currentIntakeSemester": 2,
+        "currentIntakeYear": 2,
+        "student_id": "20932141",
+        "profile_picture": ""
     }
 ]
